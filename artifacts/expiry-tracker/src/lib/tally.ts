@@ -1,6 +1,6 @@
 /**
  * Tally form integration helper.
- * Form: ExpiryOS Early Access & Waitlist
+ * Form: ExpiresSoon Early Access & Waitlist
  * URL: https://tally.so/r/lbPjoV
  *
  * ## Why the embed script is loaded on demand

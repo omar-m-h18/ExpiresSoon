@@ -104,7 +104,7 @@ This folder is the exact set of things that will **not** port to a self-hosted b
 
 The delete button showed "Failed to delete item" while the network tab showed HTTP 204. The item was removed from the database.
 
-I fetched the live bundle at `https://expiryos.netlify.app/assets/index-C2cMtcLG.js` and read its fetch wrapper. It ends with `return await response.json()`, with no guard for 204 or 205. The string `Invalid JSON response body` is absent from the bundle.
+I fetched the live bundle at `https://expiresoon.netlify.app/assets/index-C2cMtcLG.js` and read its fetch wrapper. It ends with `return await response.json()`, with no guard for 204 or 205. The string `Invalid JSON response body` is absent from the bundle.
 
 On a 204 the body is empty. `response.json()` on an empty body throws `SyntaxError`. TanStack Query catches it, calls `onError`, and the UI reports a failure that did not happen. `onSuccess` never runs, so `invalidateQueries` never runs, and the deleted row stays on screen until a manual reload.
 
@@ -315,7 +315,7 @@ The `FirstRunEmpty` tutorial component was reported as invisible. Investigation 
 
 ### Cause 1: Wrong bundle on the live site (blocking)
 
-The live site `expiryos.netlify.app` continued to serve `index-C2cMtcLG.js` (August 2026). The new bundle `index-DRfr193c.js` — which contains `FirstRunEmpty` — was uploaded by GitHub Actions to Netlify but was never promoted to production because **Netlify "Auto publishing" is disabled**.
+The live site `expiresoon.netlify.app` continued to serve `index-C2cMtcLG.js` (August 2026). The new bundle `index-DRfr193c.js` — which contains `FirstRunEmpty` — was uploaded by GitHub Actions to Netlify but was never promoted to production because **Netlify "Auto publishing" is disabled**.
 
 This is intentional (owner is on the free tier and wants to keep Netlify build minutes at zero). The workflow is: GitHub Actions builds and uploads → owner manually clicks "Publish deploy" in the Netlify dashboard → live site updates. This step was missed after the last CI run.
 
@@ -447,7 +447,7 @@ When automatic room seeding was removed (D-001), cold visitors arrived at an emp
    - **Step 1:** Clickable item presets (*Passport*, *Car Insurance*, *Domain Name*, *Streaming*) that update a simulated live item card preview.
    - **Step 2:** Interactive status explorer (*Active*, *Expiring Soon*, *Expired*) explaining continuous, non-stale background calculations.
    - **Step 3:** Actionable choice between loading 4 sample items and creating a custom item.
-2. **Skippable & Recoverable:** Add a clear "Skip tutorial" action that collapses the tour into a clean empty room state. Persist the dismissal in `sessionStorage` (`expiryos_tutorial_skipped`) while providing an instant "Show interactive tour" reactivation link.
+2. **Skippable & Recoverable:** Add a clear "Skip tutorial" action that collapses the tour into a clean empty room state. Persist the dismissal in `sessionStorage` (`expiresoon_tutorial_skipped`) while providing an instant "Show interactive tour" reactivation link.
 
 ### Affects
 

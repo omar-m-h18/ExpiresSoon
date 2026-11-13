@@ -355,14 +355,15 @@ appear in an Arabic interface.
 
 ---
 
-## ⬜ Step 9 — Rename the project
+## ✅ Step 9 — Rename the project (done)
 
 **Priority:** low (do it before launch, not after) · **Effort:** 1 day · **Blocks:** nothing
 
 ### Problem
 
-`ExpiryOS` reads as a feature flag, not a brand, and the namespace is partly
-taken: `expiryos.com` is registered (`expiryos.io` is free).
+The previous name read as a feature flag, not a brand, and its `.com` namespace was
+partly taken. **Decision: renamed to `ExpiresSoon`** — `expiresoon.com`, `.io`,
+`.app`, `.netlify.app` and `.onrender.com` are all free (verified 2026-11-09).
 
 ### Research already done
 
@@ -405,6 +406,13 @@ Runner-up **`Lapsely`** (`lapsely.io`) is more brandable but loses the `.com` an
 carries "lapse" — a word meaning *failure* — in a product whose promise is that
 you won't forget.
 
+### Outcome (supersedes the recommendation above)
+
+**`ExpiresSoon` was chosen and applied.** It is plain English, needs no teaching,
+and is the sentence the product itself emits. It is free on `.com`, `.net`, `.org`,
+`.io`, `.app`, `.dev`, `.co`, npm, and on GitHub/Netlify/Render slugs — but it is a
+generic phrase, so it is a get-by name, not a mark to build a moat on.
+
 ### ⚠️ This is a preliminary screen, not a clearance opinion
 
 - USPTO TESS/API returned 404 (endpoint retired), TMview refused connections
@@ -436,21 +444,21 @@ you won't forget.
 
 **Identifiers that are not just display strings:**
 
-- `SESSION_COOKIE = "expiryos_demo"` (`api-server/src/lib/session.ts:28`) —
+- `SESSION_COOKIE = "expiresoon_demo"` (`api-server/src/lib/session.ts:28`) —
   renaming it invalidates every existing anonymous room. Acceptable pre-launch;
   **not** acceptable after launch without a migration.
-- `sessionStorage` key `expiryos_hide_early_access_callout`
+- `sessionStorage` key `expiresoon_hide_early_access_callout`
   (`items-list.tsx:60,66`).
-- `DEV_FALLBACK_SECRET` contains `expiryos-…` (`session.ts:37`) — dev only.
-- Error message example URL `https://expiryos.netlify.app` (`app.ts:35`).
-- Package names: `@workspace/expiry-os` and root `expiry-os`.
+- `DEV_FALLBACK_SECRET` contains `expiresoon-…` (`session.ts:37`) — dev only.
+- Error message example URL `https://expiresoon.netlify.app` (`app.ts:35`).
+- Package names: `@workspace/expires-soon` and root `expires-soon`.
 
 Generated files under `lib/api-zod` and `lib/api-client-react` are Orval output —
 **never hand-edit**; change `openapi.yaml` and re-run codegen.
 
 ### Acceptance criteria
 
-- `grep -ri expiryos` returns only `CHANGELOG.md` history and intentional
+- `grep -ri expiresoon` returns only `CHANGELOG.md` history and intentional
   migration notes.
 - `pnpm run typecheck` passes after codegen.
 - No cookie-name change ships after launch without a session migration.
@@ -478,7 +486,7 @@ Recorded so these are not re-litigated later.
 
 ```bash
 pnpm run typecheck                                        # primary gate
-pnpm --filter @workspace/expiry-os run dev                # visual pass
+pnpm --filter @workspace/expires-soon run dev                # visual pass
 ```
 
 Visual checklist for shape/motion changes: light **and** dark mode; a hover on an
@@ -540,4 +548,4 @@ advice — have counsel review before launch.
 | Age gate / COPPA | No signup, no accounts, general-audience tool. Add a "13 or older" line to the waitlist form only. |
 | Auto-renewal disclosure / checkout | No payment code. Revisit if billing ships. |
 | Upload content disclaimer | No upload feature exists. |
-| Cookie consent banner | The only cookie is the strictly-necessary `expiryos_demo` session cookie (HttpOnly, SameSite=Lax, Secure in prod). ePrivacy Art. 5(3) exempts it — a banner would be theatre. Document it in the privacy policy instead. |
+| Cookie consent banner | The only cookie is the strictly-necessary `expiresoon_demo` session cookie (HttpOnly, SameSite=Lax, Secure in prod). ePrivacy Art. 5(3) exempts it — a banner would be theatre. Document it in the privacy policy instead. |

@@ -1,8 +1,8 @@
-# ExpiryOS
+# ExpiresSoon
 
 A focused web application for tracking expiration dates across licenses, subscriptions, documents, insurance policies, and warranties.
 
-ExpiryOS centralizes renewal tracking and automatically computes item urgency (*Active*, *Expiring Soon*, or *Expired*) on request without background cron jobs or stored state.
+ExpiresSoon centralizes renewal tracking and automatically computes item urgency (*Active*, *Expiring Soon*, or *Expired*) on request without background cron jobs or stored state.
 
 ![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)
 
@@ -29,7 +29,7 @@ ExpiryOS centralizes renewal tracking and automatically computes item urgency (*
 
 The live demo operates as an isolated, multi-tenant sandbox without registration:
 
-- **Signed Session Cookie:** Each visitor receives an `HttpOnly`, `SameSite=Lax` session cookie (`expiryos_demo`) signed via HMAC-SHA256. The signed payload maps directly to an isolated `ownerId`.
+- **Signed Session Cookie:** Each visitor receives an `HttpOnly`, `SameSite=Lax` session cookie (`expiresoon_demo`) signed via HMAC-SHA256. The signed payload maps directly to an isolated `ownerId`.
 - **Owner Scoping:** All database operations are filtered by `ownerId`. Cross-tenant reads and mutations are rejected at the repository layer.
 - **Ephemeral Lifecycle:** Cookies do not set an expiration date; closing the browser terminates the session.
 - **Zero-Write Cold Start:** New rooms start empty. No database writes occur until a visitor creates an item.
@@ -64,8 +64,8 @@ The live demo operates as an isolated, multi-tenant sandbox without registration
 
 ```bash
 # 1. Clone repository
-git clone https://github.com/omar-m-h18/ExpiryOS
-cd ExpiryOS
+git clone https://github.com/omar-m-h18/ExpiresSoon
+cd ExpiresSoon
 
 # 2. Install dependencies
 pnpm install
@@ -106,7 +106,7 @@ NODE_ENV=development pnpm --filter @workspace/api-server run start
 # Terminal 2: Frontend SPA (defaults to port 3000)
 # Configure API target for local SPA requests:
 export VITE_API_BASE_URL="http://localhost:3001"
-pnpm --filter @workspace/expiry-os run dev
+pnpm --filter @workspace/expires-soon run dev
 ```
 
 > **Note:** The frontend has no local proxy. Set `VITE_API_BASE_URL` to point client requests to the active API port during local development.
@@ -147,7 +147,7 @@ CI pipeline (`.github/workflows/ci.yml`) triggers on pull requests and pushes to
 ## Repository Structure
 
 ```
-ExpiryOS/
+ExpiresSoon/
 ├── artifacts/
 │   ├── api-server/              # Express 5 REST API
 │   │   └── src/
@@ -157,7 +157,7 @@ ExpiryOS/
 │   │       ├── middlewares/     # requireSession (cookie verification), error-handler
 │   │       ├── repositories/    # IItemsRepository abstraction + Drizzle implementation
 │   │       └── routes/          # Express route handlers (items, session, health)
-│   └── expiry-tracker/          # React 19 + Vite SPA (package: @workspace/expiry-os)
+│   └── expiry-tracker/          # React 19 + Vite SPA (package: @workspace/expires-soon)
 │       └── src/
 │           ├── components/      # UI components (first-run, layout, calendar, badges)
 │           ├── hooks/           # useItemFilters, useDebouncedValue, useRoomIsEmpty
@@ -231,4 +231,4 @@ scroll-driven motion, and dashboard density work remain.
 
 ## License
 
-[MIT](LICENSE) © ExpiryOS Contributors
+[MIT](LICENSE) © ExpiresSoon Contributors

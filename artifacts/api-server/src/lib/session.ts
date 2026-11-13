@@ -25,7 +25,7 @@ import { createHmac, randomUUID, timingSafeEqual } from "node:crypto";
 import type { Request, Response } from "express";
 import type { CookieOptions } from "express";
 
-export const SESSION_COOKIE = "expiryos_demo";
+export const SESSION_COOKIE = "expiresoon_demo";
 
 const isProduction = process.env.NODE_ENV === "production";
 
@@ -34,7 +34,7 @@ const isProduction = process.env.NODE_ENV === "production";
  * one) keeps demo rooms stable across `pnpm dev` restarts. It is never used in
  * production: the guard below refuses to boot without a real secret.
  */
-const DEV_FALLBACK_SECRET = "expiryos-dev-only-insecure-session-secret";
+const DEV_FALLBACK_SECRET = "expiresoon-dev-only-insecure-session-secret";
 
 if (isProduction && !process.env.SESSION_SECRET) {
   throw new Error(

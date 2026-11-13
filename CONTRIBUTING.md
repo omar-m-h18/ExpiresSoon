@@ -1,4 +1,4 @@
-# Contributing to ExpiryOS
+# Contributing to ExpiresSoon
 
 > **This guide is under revamping.**
 >

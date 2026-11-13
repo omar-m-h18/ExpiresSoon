@@ -9,7 +9,7 @@
 ## Preconditions
 
 - Branch per PR. Never branch from a dirty tree — see PR 0.
-- Working directory: `C:\Users\LENOVO\Desktop\Programming\expiryos\ExpiryOS`
+- Working directory: `C:\Users\LENOVO\Desktop\Programming\expiresoon\ExpiresSoon`
 - Primary verification gate: `pnpm run typecheck` (root). Secondary: package test suites.
 - No linter or formatter is configured in this repo. Match surrounding style manually.
 - No migration files exist. Schema changes would require `pnpm --filter @workspace/db run push`. **No PR in this plan touches the schema.**
@@ -97,7 +97,7 @@ This is the root cause. The action defaults this to `false` and exits 0 when `NE
 - name: Verify deployed site
   run: |
     curl --fail --silent --show-error --retry 5 --retry-delay 5 --retry-all-errors \
-      https://expiryos.netlify.app/api/session
+      https://expiresoon.netlify.app/api/session
 ```
 
 3. Add a stale-bundle tripwire immediately after "Build web app", before the deploy step. This fails the build if the output artifact reverts to the known-bad bundle:
@@ -115,7 +115,7 @@ This is the root cause. The action defaults this to `false` and exits 0 when `NE
 
 1. Push to `main`.
 2. Watch the run. Confirm the deploy step reports an actual deploy, not `not deployable`.
-3. `curl -s https://expiryos.netlify.app/ | grep -o '/assets/index-[A-Za-z0-9_-]*\.js'` must not return `index-C2cMtcLG.js`.
+3. `curl -s https://expiresoon.netlify.app/ | grep -o '/assets/index-[A-Za-z0-9_-]*\.js'` must not return `index-C2cMtcLG.js`.
 4. Manual: open `/demo/items`, delete an item. Expect HTTP 204, a success toast, and the row disappearing with no page reload.
 
 ### Revert
@@ -246,7 +246,7 @@ Same treatment: replace the three inline `mutate` call sites (create success/err
 
 ```
 pnpm run typecheck
-pnpm --filter @workspace/expiry-os run build
+pnpm --filter @workspace/expires-soon run build
 ```
 
 Manual: delete an item, create an item, edit an item. Toasts fire once each. Lists refresh without a reload.
@@ -401,7 +401,7 @@ Render the component when the room is empty and not loading. Leave the existing 
 
 ### Verification
 
-`pnpm run typecheck`, `pnpm --filter @workspace/expiry-os run build`. Then manual: clean cookie → first-run card renders → add first item → dashboard populates.
+`pnpm run typecheck`, `pnpm --filter @workspace/expires-soon run build`. Then manual: clean cookie → first-run card renders → add first item → dashboard populates.
 
 ---
 
@@ -438,7 +438,7 @@ Add `SEED_SAMPLE_DATA` with a note that it is off by default and exists so opera
   - **Step 1:** Interactive item presets (*Passport*, *Car Insurance*, *Domain Name*, *Streaming*) that update a live item card preview.
   - **Step 2:** Interactive status calculation demo demonstrating how Active (>30d), Expiring Soon (≤30d), and Expired compute continuously.
   - **Step 3:** Actionable choice between loading 4 sample items and creating a new custom item.
-  - **Skippable & Persistent:** Clean "Skip tutorial" button in the header; dismissed state saved to `sessionStorage` (`expiryos_tutorial_skipped`) with a one-click option to replay the tour.
+  - **Skippable & Persistent:** Clean "Skip tutorial" button in the header; dismissed state saved to `sessionStorage` (`expiresoon_tutorial_skipped`) with a one-click option to replay the tour.
 
 ### Modify: `artifacts/expiry-tracker/src/components/demo-banner.tsx`, `layout.tsx`, `landing.tsx`, `items-list.tsx`
 - **Early Access Discoverability & Gentle Push:**
@@ -458,7 +458,7 @@ Facts verified during planning. Re-verify before acting on each.
 
 | Fact | How it was established |
 |---|---|
-| Live bundle is `index-C2cMtcLG.js` and ends its fetch with `return await h.json()` | Fetched `https://expiryos.netlify.app/` then the asset; searched for `Invalid JSON response body` (absent) and `204` (only a bitmask constant) |
+| Live bundle is `index-C2cMtcLG.js` and ends its fetch with `return await h.json()` | Fetched `https://expiresoon.netlify.app/` then the asset; searched for `Invalid JSON response body` (absent) and `204` (only a bitmask constant) |
 | `parseResponse` already exists in source | Read `lib/api-client-react/src/custom-fetch.ts` lines 41–56 |
 | Fix predates the live bundle | `git log -S parseResponse -- lib/api-client-react/src/custom-fetch.ts` → `2bdca69`, 2026-08-29 |
 | Deploy action exits 0 without credentials | `fails-without-credentials` defaults to `false`; no such key in `.github/workflows/ci.yml` |

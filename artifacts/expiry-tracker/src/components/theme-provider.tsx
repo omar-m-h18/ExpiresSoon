@@ -18,7 +18,7 @@ interface ThemeContextType {
 
 const ThemeContext = createContext<ThemeContextType | undefined>(undefined);
 
-const STORAGE_KEY = "expiry-os-theme";
+const STORAGE_KEY = "expires-soon-theme";
 
 function getInitialTheme(): Theme {
   if (typeof window === "undefined") return "light";

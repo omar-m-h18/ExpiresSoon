@@ -4,7 +4,7 @@
 
 Fix the "Failed to delete item" toast that appears even though the DELETE request returns **204 No Content** and the item is actually deleted server-side — by getting the already-correct frontend source actually deployed, plus one minimal config file so Netlify deploys deterministically.
 
-**Root cause (proven from the live deployed bundle, not guessed):** The `expiryos.netlify.app` site serves an **old JavaScript bundle** (`/assets/index-C2cMtcLG.js`) whose success path for DELETE still does `return await h.json()` with **no 204/205 guard**. A 204 response has an empty body, so `response.json()` throws `SyntaxError: Unexpected end of JSON input`, which surfaces through React Query's `onError` as the toast **"Failed to delete item"** — even though the server already deleted the item.
+**Root cause (proven from the live deployed bundle, not guessed):** The `expiresoon.netlify.app` site serves an **old JavaScript bundle** (`/assets/index-C2cMtcLG.js`) whose success path for DELETE still does `return await h.json()` with **no 204/205 guard**. A 204 response has an empty body, so `response.json()` throws `SyntaxError: Unexpected end of JSON input`, which surfaces through React Query's `onError` as the toast **"Failed to delete item"** — even though the server already deleted the item.
 
 Evidence from the deployed bundle:
 ```
@@ -33,7 +33,7 @@ The one code-level change. Netlify has no build configuration today, so manual/d
 
 ```toml
 [build]
-  command = "pnpm --filter @workspace/expiry-os run build"
+  command = "pnpm --filter @workspace/expires-soon run build"
   publish = "artifacts/expiry-tracker/dist/public"
 
 [build.environment]
@@ -41,7 +41,7 @@ The one code-level change. Netlify has no build configuration today, so manual/d
 ```
 
 Notes:
-- The web package name is `@workspace/expiry-os` (folder `artifacts/expiry-tracker`), confirmed in `artifacts/expiry-tracker/package.json`.
+- The web package name is `@workspace/expires-soon` (folder `artifacts/expiry-tracker`), confirmed in `artifacts/expiry-tracker/package.json`.
 - Root `package.json` declares `packageManager: pnpm@10.30.3`, so Netlify installs with pnpm and resolves the `@workspace/api-client-react` workspace package from current source (all lib pkgs export `./src/index.ts` directly — no prebuild needed).
 - Vite `outDir` is `dist/public` (see `vite.config.ts`), so `publish` points there; Netlify copies `_redirects` from `public/` into the publish dir.
 - `NODE_VERSION = "24"` satisfies the root `engines.node: ">=24"`.
@@ -81,18 +81,18 @@ Gated deploy so GitHub Actions becomes the quality gate (never waste Netlify cre
 
 ## Testing
 
-1. **CI gate (GitHub Actions, cloud):** pushing to `main` runs `typecheck-and-test` (existing ci.yml). The new `deploy-netlify` job uses `pnpm --filter @workspace/expiry-os run build`; it must exit 0 and emit `artifacts/expiry-tracker/dist/public/assets/index-<hash>.js`. Deploy runs only if this build succeeds.
+1. **CI gate (GitHub Actions, cloud):** pushing to `main` runs `typecheck-and-test` (existing ci.yml). The new `deploy-netlify` job uses `pnpm --filter @workspace/expires-soon run build`; it must exit 0 and emit `artifacts/expiry-tracker/dist/public/assets/index-<hash>.js`. Deploy runs only if this build succeeds.
 2. **Bundle content check (cloud, read-only):** after the deploy, fetch the new bundle and confirm it:
    - contains `Invalid JSON response body` (the `parseResponse` message) or a `204`/`205` status compare;
    - no longer contains the unconditional success path `return await h.json()` without a guard.
 3. **Existing unit tests:** `lib/api-client-react/src/custom-fetch.test.ts` already covers `parseResponse` 204/205 (runs in CI's api-server test step). No test changes needed.
-4. **Deployed verification:** after the deploy, fetch `https://expiryos.netlify.app/`, confirm the JS asset hash **differs** from `index-C2cMtcLG.js`, fetch that new bundle, confirm it contains the 204 guard, then a hard-refresh browser DELETE shows **"Item deleted successfully"** and the item vanishes.
+4. **Deployed verification:** after the deploy, fetch `https://expiresoon.netlify.app/`, confirm the JS asset hash **differs** from `index-C2cMtcLG.js`, fetch that new bundle, confirm it contains the 204 guard, then a hard-refresh browser DELETE shows **"Item deleted successfully"** and the item vanishes.
 
 ---
 
 ## Implementation Order
 
-1. **Add `/netlify.toml`** — build command (`pnpm --filter @workspace/expiry-os run build`), publish dir, Node 24 (done).
+1. **Add `/netlify.toml`** — build command (`pnpm --filter @workspace/expires-soon run build`), publish dir, Node 24 (done).
 2. **Add `deploy-netlify` job** to `.github/workflows/ci.yml`, gated on the existing checks passing, main-push only (done).
 3. **Set Netlify repo secrets** in the GitHub repo *Settings → Secrets and variables → Actions*: `NETLIFY_AUTH_TOKEN` (personal access token from Netlify user settings) and `NETLIFY_SITE_ID` (site API ID).
 4. **Commit + push** `netlify.toml` and `.github/workflows/ci.yml` to `main`. GitHub Actions builds + tests, and only on success deploys to Netlify from `artifacts/expiry-tracker/dist/public`.

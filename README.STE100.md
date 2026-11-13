@@ -1,4 +1,4 @@
-# ExpiryOS — Technical Specification and User Manual (ASD-STE100)
+# ExpiresSoon — Technical Specification and User Manual (ASD-STE100)
 
 ## Part 1: ASD-STE100 Standard Overview and Conversion Principles
 
@@ -28,11 +28,11 @@ ASD-STE100 (Simplified Technical English) is an international standard for techn
 
 ---
 
-## Part 2: ExpiryOS Manual in ASD-STE100
+## Part 2: ExpiresSoon Manual in ASD-STE100
 
 ### 1. Description
 
-ExpiryOS is a web application that tracks expiration dates. The application monitors dates for licenses, subscriptions, documents, policies, and product warranties.
+ExpiresSoon is a web application that tracks expiration dates. The application monitors dates for licenses, subscriptions, documents, policies, and product warranties.
 
 The application calculates the item status when a user requests the data. The application does not save the status value in the database.
 
@@ -59,7 +59,7 @@ The application provides these functional capabilities:
 ### 3. Tenancy and Data Protection
 
 The live demonstration operates as an isolated multi-tenant system without user registration:
-- **Session Identification:** The server gives each visitor an HTTP cookie named `expiryos_demo`. The server signs this cookie with HMAC-SHA256.
+- **Session Identification:** The server gives each visitor an HTTP cookie named `expiresoon_demo`. The server signs this cookie with HMAC-SHA256.
 - **Data Isolation:** The database attaches an `ownerId` value to each record. The server accepts database operations only for the matching `ownerId` value.
 - **Session Lifecycle:** The session cookie does not contain an expiration timestamp. When the visitor closes the browser, the session ends.
 - **Initial State:** A new session starts with zero database records. The server does not write records to the database until the user requests an action.
@@ -90,8 +90,8 @@ Do these steps in the specified sequence:
 
 1. Clone the repository from GitHub:
    ```bash
-   git clone https://github.com/omar-m-h18/ExpiryOS
-   cd ExpiryOS
+   git clone https://github.com/omar-m-h18/ExpiresSoon
+   cd ExpiresSoon
    ```
 
 2. Install all dependencies:
@@ -139,7 +139,7 @@ Start the backend API server and the frontend interface in two separate terminal
 
 3. Start the frontend interface:
    ```bash
-   pnpm --filter @workspace/expiry-os run dev
+   pnpm --filter @workspace/expires-soon run dev
    ```
 
 4. Open your web browser.

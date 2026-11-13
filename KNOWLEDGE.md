@@ -1,6 +1,6 @@
-# Project Knowledge — ExpiryOS
+# Project Knowledge — ExpiresSoon
 
-This file is the living context for developers working on ExpiryOS. It records
+This file is the living context for developers working on ExpiresSoon. It records
 architecture decisions, the anonymous-demo model, the production hosting/release
 setup, and the hard-won debugging facts from getting a deployed demo working.
 It complements `README.md` (setup, testing, deployment) and `AGENTS.md`
@@ -28,7 +28,7 @@ private ephemeral room of data, plus an early-bird email waitlist.
 ## 2. Repository layout (pnpm monorepo)
 
 ```
-ExpiryOS/
+ExpiresSoon/
 ├── artifacts/
 │   ├── api-server/          # Express 5 REST API (the backend)
 │   │   └── src/
@@ -38,7 +38,7 @@ ExpiryOS/
 │   │       ├── middlewares/ # requireSession, error-handler
 │   │       ├── repositories/# IItemsRepository + Drizzle impl, leads
 │   │       └── routes/      # items, leads, session, health, index
-│   ├── expiry-tracker/      # React 19 + Vite frontend; package @workspace/expiry-os
+│   ├── expiry-tracker/      # React 19 + Vite frontend; package @workspace/expires-soon
 │   │   └── src/             # pages, components, hooks, lib
 │   └── mockup-sandbox/      # scratch / throwaway playground (not the product)
 ├── lib/
@@ -53,19 +53,19 @@ ExpiryOS/
 
 Workspace packages that matter most: `@workspace/db`, `@workspace/api-zod`,
 `@workspace/api-client-react`, `@workspace/api-server`, and
-`@workspace/expiry-os`.
+`@workspace/expires-soon`.
 
 > **Naming gotcha:** the frontend folder is `artifacts/expiry-tracker/` but its
-> package name is `@workspace/expiry-os`. The two names differ on purpose (the
+> package name is `@workspace/expires-soon`. The two names differ on purpose (the
 > folder is a legacy Replit artifact path; the package was rebranded to
-> ExpiryOS). Trust the `@workspace/*` package names in filters.
+> ExpiresSoon). Trust the `@workspace/*` package names in filters.
 
 ---
 
 ## 3. How the anonymous demo works (the core model)
 
 Every visitor gets a **private room** identified by a random UUID stored in an
-`HttpOnly`, `SameSite=Lax`, **no-expiry** session cookie named `expiryos_demo`
+`HttpOnly`, `SameSite=Lax`, **no-expiry** session cookie named `expiresoon_demo`
 (`artifacts/api-server/src/lib/session.ts`). Because there's no
 `maxAge`/`expires`, the "room" dies when
 the browser (or a private window) closes — a truly ephemeral per-visitor demo
@@ -106,7 +106,7 @@ Empty rooms feature an **interactive 3-step onboarding walkthrough**
 (`components/first-run/first-run-empty.tsx`) with preset item previews, automated status
 calculation demonstrations, and a clear choice between loading sample items and creating a
 custom item. Visitors can skip the tutorial at any time; dismissal state is saved in
-`sessionStorage` (`expiryos_tutorial_skipped`) with a one-click option to replay the tour.
+`sessionStorage` (`expiresoon_tutorial_skipped`) with a one-click option to replay the tour.
 
 The 4-item example roster lives in `artifacts/api-server/src/seed/` and is written by
 `POST /api/session/reset`, triggered by "Load 4 sample items" on the empty room screen.
@@ -188,7 +188,7 @@ Render API host, otherwise the browser hits static-ish 404s for every API call.
 URL.**
 
 ```text
-/api/*    https://expiryos-api.onrender.com/api/:splat   200
+/api/*    https://expiresoon-api.onrender.com/api/:splat   200
 /*        /index.html   200
 ```
 
@@ -197,7 +197,7 @@ URL.**
 
 ```toml
 [build]
-  command = "pnpm --filter @workspace/expiry-os run build"
+  command = "pnpm --filter @workspace/expires-soon run build"
   publish = "artifacts/expiry-tracker/dist/public"
 
 [build.environment]
@@ -289,7 +289,7 @@ service** and `RUN_DB_TESTS: "1"`:
    DB-backed owner-isolation tests (`*.owner.test.ts`) actually run.
 
 Job `deploy-netlify` runs **only after `typecheck-and-test` passes and only on a
-push to `main`** (never on a PR). It builds `@workspace/expiry-os` and deploys
+push to `main`** (never on a PR). It builds `@workspace/expires-soon` and deploys
 `artifacts/expiry-tracker/dist/public` to Netlify. It requires the repository
 secrets `NETLIFY_AUTH_TOKEN` and `NETLIFY_SITE_ID`. **If those secrets are
 missing, `nwtgck/actions-netlify` exits successfully without deploying**, so a
@@ -415,7 +415,7 @@ red.
   pills (*Documents*, *Subscriptions*, *Insurance*, *Software*, *Warranties*, *Health*)
   under the category input to accelerate entry without restricting custom values.
 - **Tutorial dismissal persistence:** The interactive onboarding in `first-run-empty.tsx`
-  stores its skipped state in `sessionStorage` (`expiryos_tutorial_skipped`), so navigating
+  stores its skipped state in `sessionStorage` (`expiresoon_tutorial_skipped`), so navigating
   between `/demo` and `/demo/items` remembers user dismissal while retaining a replay link.
 - **Multi-surface early access integration:** Tally waitlist popup triggers (`lib/tally.ts`,
   modal form `lbPjoV`) are placed across the top demo banner, desktop sidebar footer card,

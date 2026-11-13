@@ -7,6 +7,23 @@ This project follows [Semantic Versioning](https://semver.org/) and
 
 ---
 
+## [Unreleased] — Rename to ExpiresSoon
+
+> Rebrand only: display text, docs, package names, session/storage identifiers,
+> deployment URLs, and the OpenAPI spec description. No API, data-model, or
+> routing changes. The session-cookie rename invalidates existing anonymous rooms.
+
+### Changed
+- **Project renamed to ExpiresSoon.** Every user-visible string, document, package
+  name (`expiry-os` → `expires-soon`, `@workspace/expiry-os` →
+  `@workspace/expires-soon`), cookie/storage key (`expiryos_*` → `expiresoon_*`),
+  and deployment URL (`expiryos.netlify.app` → `expiresoon.netlify.app`,
+  `expiryos-api.onrender.com` → `expiresoon-api.onrender.com`) was updated.
+- **OpenAPI description** updated to "ExpiresSoon API specification"; generated
+  Orval clients carry the new header (regenerate to reproduce).
+
+---
+
 ## [Unreleased] — Privacy & Compliance Hardening
 
 > Scope: third-party request elimination, transparency at the point of data
@@ -98,7 +115,7 @@ This project follows [Semantic Versioning](https://semver.org/) and
   - Step 2: Interactive renewal timeline scenarios (*In 1 Year*, *In 2 Weeks*, *5 Days Ago*) that dynamically update an interactive item card and status badge in real time to visually explain urgency calculations.
   - Step 3: Single focused call-to-action ("Add your first item") with core product takeaways.
   - Concealed sample data button (`SHOW_SAMPLE_BUTTON = false`) per user feedback while preserving underlying handler logic for future review.
-  - Skippable at any time with a clean header action; dismissed state persists across pages in `sessionStorage` (`expiryos_tutorial_skipped`) with a one-click option to replay the tour.
+  - Skippable at any time with a clean header action; dismissed state persists across pages in `sessionStorage` (`expiresoon_tutorial_skipped`) with a one-click option to replay the tour.
 - **High-visibility Early Access triggers** across 5 touchpoints:
   - Top demo banner (`components/demo-banner.tsx`): sleek `✨ Get Early Access` pill button visible across all demo pages.
   - Desktop sidebar footer (`components/layout.tsx`): elevated, high-contrast Early Access card highlighting automated reminders.
@@ -132,7 +149,7 @@ This project follows [Semantic Versioning](https://semver.org/) and
 - **Per-room item cap** (`MAX_ITEMS_PER_OWNER`, default 100): `POST /api/items`
   now returns `409` once a room is full, backed by a new indexed
   `itemsRepository.count()`. Each anonymous room was previously free storage.
-- **Session cookie signing** (`lib/session.ts`): the `expiryos_demo` cookie is
+- **Session cookie signing** (`lib/session.ts`): the `expiresoon_demo` cookie is
   now `<uuid>.<base64url HMAC-SHA256>`, verified in constant time. Prevents a
   visitor who learns another's room id from reading, modifying, or (via
   `POST /api/session/reset`) deleting that room. **`SESSION_SECRET` is required
@@ -263,16 +280,16 @@ This project follows [Semantic Versioning](https://semver.org/) and
 
 ## [1.1.0] — 2026-07-21
 
-Project-wide rebrand from **Expiry Tracker** to **ExpiryOS** plus open-source readiness and UX polish.
+Project-wide rebrand from **Expiry Tracker** to **ExpiresSoon** plus open-source readiness and UX polish.
 
 ### Changed
-- **Branding**: renamed all visible references from "Expiry Tracker" / "ExpiryTracker" to **ExpiryOS**.
+- **Branding**: renamed all visible references from "Expiry Tracker" / "ExpiryTracker" to **ExpiresSoon**.
   - Application title, browser metadata, and logo text.
-  - Frontend package renamed to `@workspace/expiry-os`.
+  - Frontend package renamed to `@workspace/expires-soon`.
   - Replit workflow command updated to use the new package name.
-  - Default `APP_NAME` changed from `ExpiryTracker` to `ExpiryOS`.
-  - Theme `localStorage` key changed from `expiry-tracker-theme` to `expiry-os-theme`.
-- **OpenAPI specification**: description updated to *ExpiryOS API specification*; all generated client hooks and Zod schemas regenerated.
+  - Default `APP_NAME` changed from `ExpiryTracker` to `ExpiresSoon`.
+  - Theme `localStorage` key changed from `expiry-tracker-theme` to `expires-soon-theme`.
+- **OpenAPI specification**: description updated to *ExpiresSoon API specification*; all generated client hooks and Zod schemas regenerated.
 - **Dashboard Spotlight**: clicking the Spotlight call-to-action now navigates to the single expiring item when only one exists, or to the filtered "Expiring Soon" list when multiple items are due this week.
 - **Repository pattern**: extracted `IItemsRepository` interface and `DrizzleItemsRepository` implementation, decoupling data access from route handlers.
 - **Status computation**: moved all expiry-status logic into `lib/status.ts` with fully documented `computeStatus()` and `enrichItem()` helpers; status remains derived at request time rather than stored.

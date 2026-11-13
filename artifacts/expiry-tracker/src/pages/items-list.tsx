@@ -57,13 +57,13 @@ export function ItemsList() {
 
   const [showEarlyAccessCallout, setShowEarlyAccessCallout] = useState(() => {
     if (typeof window === "undefined") return true;
-    return sessionStorage.getItem("expiryos_hide_early_access_callout") !== "true";
+    return sessionStorage.getItem("expiresoon_hide_early_access_callout") !== "true";
   });
 
   const handleDismissCallout = () => {
     setShowEarlyAccessCallout(false);
     if (typeof window !== "undefined") {
-      sessionStorage.setItem("expiryos_hide_early_access_callout", "true");
+      sessionStorage.setItem("expiresoon_hide_early_access_callout", "true");
     }
   };
 
@@ -240,7 +240,7 @@ export function ItemsList() {
                       Want automated renewal reminders sent directly to your inbox or phone?
                     </h4>
                     <p className="text-xs text-muted-foreground mt-0.5 leading-relaxed">
-                      In the upcoming cloud release, ExpiryOS delivers alerts before renewals expire. Join early access to get early invites.
+                      In the upcoming cloud release, ExpiresSoon delivers alerts before renewals expire. Join early access to get early invites.
                     </p>
                   </div>
                 </div>

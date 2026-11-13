@@ -2,13 +2,13 @@
 
 **Date:** September 15, 2026  
 **Status:** Investigation Complete (No Code Fix Applied, as instructed)  
-**Applies to:** ExpiryOS Frontend (`artifacts/expiry-tracker`), API Client (`lib/api-client-react`), CI/CD Pipeline (`.github/workflows/ci.yml`), and Netlify Production Deployment (`expiryos.netlify.app`).
+**Applies to:** ExpiresSoon Frontend (`artifacts/expiry-tracker`), API Client (`lib/api-client-react`), CI/CD Pipeline (`.github/workflows/ci.yml`), and Netlify Production Deployment (`expiresoon.netlify.app`).
 
 ---
 
 ## Executive Summary
 
-When a user clicks the **Delete** button on an item in the ExpiryOS web application:
+When a user clicks the **Delete** button on an item in the ExpiresSoon web application:
 1. The backend **successfully** deletes the item from the database and returns `HTTP 204 No Content` (an empty response body).
 2. The browser immediately displays a red toast notification: **"Failed to delete item"**.
 3. The item remains visible in the UI list until the page is manually reloaded.
@@ -54,7 +54,7 @@ router.delete("/items/:id", async (req: Request, res: Response): Promise<void> =
 ```
 
 #### What the Live Deployed JavaScript Bundle Does:
-The live site (`https://expiryos.netlify.app/`) serves bundle `/assets/index-C2cMtcLG.js`. Inspection of this bundle confirms its fetch wrapper executes:
+The live site (`https://expiresoon.netlify.app/`) serves bundle `/assets/index-C2cMtcLG.js`. Inspection of this bundle confirms its fetch wrapper executes:
 ```javascript
 const response = await fetch(...);
 if (!response.ok) {

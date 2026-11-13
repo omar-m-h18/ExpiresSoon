@@ -25,7 +25,7 @@ import { useToast } from "@/hooks/use-toast";
 import { StatusBadge } from "@/components/status-badge";
 import { cn } from "@/lib/utils";
 
-const STORAGE_KEY = "expiryos_tutorial_skipped";
+const STORAGE_KEY = "expiresoon_tutorial_skipped";
 
 /**
  * NOTE FOR FUTURE WORK:
@@ -90,7 +90,7 @@ const TIMELINE_OPTIONS: TimelineOption[] = [
     sublabel: "Far away",
     daysOffset: 365,
     status: "active",
-    note: "Safe. ExpiryOS keeps it organized in your inventory without bothering you.",
+    note: "Safe. ExpiresSoon keeps it organized in your inventory without bothering you.",
   },
   {
     id: "soon",
@@ -183,7 +183,7 @@ export function FirstRunEmpty() {
               Nothing tracked yet
             </h2>
             <p className="text-sm sm:text-base text-muted-foreground mt-2 max-w-md leading-relaxed">
-              Add your first item and ExpiryOS will keep an eye on its renewal and expiry dates for you.
+              Add your first item and ExpiresSoon will keep an eye on its renewal and expiry dates for you.
             </p>
 
             <div className="flex flex-col sm:flex-row items-center gap-3 mt-6">
@@ -274,7 +274,7 @@ export function FirstRunEmpty() {
                 What do you want to track?
               </h3>
               <p className="text-sm text-muted-foreground mt-1 max-w-lg leading-relaxed">
-                Click an example to test how ExpiryOS organizes your renewals:
+                Click an example to test how ExpiresSoon organizes your renewals:
               </p>
             </div>
 
@@ -332,7 +332,7 @@ export function FirstRunEmpty() {
             <div className="p-3.5 rounded-lg bg-muted/30 border border-border/60 text-xs text-muted-foreground flex items-center gap-2">
               <Sparkles className="w-4 h-4 text-primary shrink-0" />
               <span>
-                Selected: <strong className="text-foreground">{selectedPreset.name}</strong> ({selectedPreset.category}). Click <strong>Next</strong> to see how ExpiryOS monitors its date.
+                Selected: <strong className="text-foreground">{selectedPreset.name}</strong> ({selectedPreset.category}). Click <strong>Next</strong> to see how ExpiresSoon monitors its date.
               </span>
             </div>
           </div>
@@ -346,7 +346,7 @@ export function FirstRunEmpty() {
                 See how dates control the urgency
               </h3>
               <p className="text-sm text-muted-foreground mt-1 max-w-lg leading-relaxed">
-                Click a timeframe below to see how ExpiryOS automatically calculates urgency for your{" "}
+                Click a timeframe below to see how ExpiresSoon automatically calculates urgency for your{" "}
                 <span className="font-semibold text-foreground">{selectedPreset.name}</span>:
               </p>
             </div>
@@ -429,7 +429,7 @@ export function FirstRunEmpty() {
             </div>
 
             <p className="text-xs text-muted-foreground italic">
-              Notice: you never have to manually update or calculate status. ExpiryOS recalculates urgency against the calendar every day.
+              Notice: you never have to manually update or calculate status. ExpiresSoon recalculates urgency against the calendar every day.
             </p>
           </div>
         )}
@@ -442,7 +442,7 @@ export function FirstRunEmpty() {
                 You're ready to track
               </h3>
               <p className="text-sm text-muted-foreground mt-1 max-w-lg leading-relaxed">
-                Add your real documents, subscriptions, and policies. ExpiryOS keeps them safe and warns you before anything lapses.
+                Add your real documents, subscriptions, and policies. ExpiresSoon keeps them safe and warns you before anything lapses.
               </p>
             </div>
 
@@ -454,7 +454,7 @@ export function FirstRunEmpty() {
                   <span>Zero Manual Upkeep</span>
                 </div>
                 <p className="text-xs text-muted-foreground leading-relaxed">
-                  Enter the expiry date once. ExpiryOS tracks the days automatically.
+                  Enter the expiry date once. ExpiresSoon tracks the days automatically.
                 </p>
               </div>
 

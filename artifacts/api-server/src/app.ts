@@ -32,7 +32,7 @@ if (isProd) {
     // Do NOT start a production API that accepts arbitrary origins.
     throw new Error(
       "FRONTEND_URL must be set in production. Set it to the frontend origin " +
-        "(e.g. https://expiryos.netlify.app).",
+        "(e.g. https://expiresoon.netlify.app).",
     );
   }
   app.use(

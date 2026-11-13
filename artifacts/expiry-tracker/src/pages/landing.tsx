@@ -14,7 +14,7 @@ export function Landing() {
               E
             </div>
             <span className="font-display font-bold text-3xl tracking-tight text-foreground">
-              ExpiryOS
+              ExpiresSoon
             </span>
           </div>
 
@@ -25,7 +25,7 @@ export function Landing() {
             </h1>
             <p className="text-muted-foreground text-base sm:text-lg max-w-xl mx-auto leading-relaxed">
               Track your licenses, subscriptions, documents, and insurance
-              policies — ExpiryOS tells you what's active, expiring soon, or
+              policies — ExpiresSoon tells you what's active, expiring soon, or
               already expired.
             </p>
           </div>
@@ -93,7 +93,7 @@ export function Landing() {
       </main>
 
       <footer className="px-6 py-6 text-center text-xs text-muted-foreground/80">
-        ExpiryOS demo — your data is private to this browser session.
+        ExpiresSoon demo — your data is private to this browser session.
       </footer>
     </div>
   );

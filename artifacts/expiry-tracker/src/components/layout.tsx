@@ -24,7 +24,7 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
               E
             </div>
             <span className="font-display font-bold text-xl tracking-tight text-foreground group-hover:text-primary transition-colors">
-              ExpiryOS
+              ExpiresSoon
             </span>
           </Link>
 

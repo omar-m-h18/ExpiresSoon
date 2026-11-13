@@ -1,6 +1,6 @@
 # AGENTS.md
 
-ExpiryOS — pnpm workspace monorepo: an OpenAPI-first Express 5 API plus a React 19 / Vite SPA for tracking items that expire.
+ExpiresSoon — pnpm workspace monorepo: an OpenAPI-first Express 5 API plus a React 19 / Vite SPA for tracking items that expire.
 
 ## Commands (run from repo root)
 
@@ -17,12 +17,12 @@ ExpiryOS — pnpm workspace monorepo: an OpenAPI-first Express 5 API plus a Reac
 
 - The API `dev` script uses bash `export NODE_ENV=...` and fails in PowerShell. Build then start explicitly:
   `pnpm --filter @workspace/api-server run build` then `$env:NODE_ENV="development"; pnpm --filter @workspace/api-server run start`
-- Frontend: `pnpm --filter @workspace/expiry-os run dev` (Vite; port from `PORT`, default 3000).
+- Frontend: `pnpm --filter @workspace/expires-soon run dev` (Vite; port from `PORT`, default 3000).
 - There is NO Vite dev proxy (the README is wrong about this). In dev, set `VITE_API_BASE_URL=http://localhost:<api-port>` or the SPA hits the Vite server and 404s on `/api/*`.
 
 ## Package vs directory names (easy to confuse)
 
-- `artifacts/expiry-tracker/` → package `@workspace/expiry-os` (frontend). Docs sometimes call it expiry-os or expiry-tracker.
+- `artifacts/expiry-tracker/` → package `@workspace/expires-soon` (frontend). Docs sometimes call it expires-soon or expiry-tracker.
 - `artifacts/api-server/` → `@workspace/api-server` (Express API).
 - Workspace packages: `lib/db`, `lib/api-spec`, `lib/api-zod`, `lib/api-client-react`, `scripts`.
 - `KNOWLEDGE.md` holds accurate architecture/ops context (anonymous demo, CI, hosting, build-order gotchas). `ROADMAP.md` holds planned UI/UX work plus approaches already rejected (with reasons) — check it before proposing design changes. `CONTRIBUTING.md` is marked _under revamping_ — use `README.md` and this file for current commands.
@@ -31,7 +31,7 @@ ExpiryOS — pnpm workspace monorepo: an OpenAPI-first Express 5 API plus a Reac
 
 - `lib/api-spec/openapi.yaml` is the contract. `lib/api-zod` and `lib/api-client-react/src/generated` are Orval-generated — never hand-edit them.
 - All item data access goes through `IItemsRepository` in `artifacts/api-server/src/repositories/items.repository.ts`; routes import the `itemsRepository` singleton. Every query/mutation is scoped by `ownerId`.
-- Anonymous per-visitor "rooms": `requireSession` mints/reads the **signed** `expiryos_demo` HttpOnly cookie → `req.ownerId`. It does **no** database work and **no** seeding; new rooms start empty. The example roster lives in `artifacts/api-server/src/seed/` and is written **only** by `POST /api/session/reset`, which backs the empty state's "show me examples" button.
+- Anonymous per-visitor "rooms": `requireSession` mints/reads the **signed** `expiresoon_demo` HttpOnly cookie → `req.ownerId`. It does **no** database work and **no** seeding; new rooms start empty. The example roster lives in `artifacts/api-server/src/seed/` and is written **only** by `POST /api/session/reset`, which backs the empty state's "show me examples" button.
 - **`SESSION_SECRET` is required in production** — the API refuses to boot without it; the cookie is an HMAC so rooms can't be forged. Dev/test fall back to a fixed insecure secret.
 - Anonymous rooms are rate-limited and capped (`MAX_ITEMS_PER_OWNER`, default 100) because every request can persist rows. Limits live in `config/index.ts`; the limiter is **in-process** (single-replica only) and relies on `app.set("trust proxy", 1)`.
 - Expiry status (`active` / `expiring_soon` / `expired`) is never stored; it is computed at request time in `lib/status.ts` (`computeStatus` / `enrichItem`). Thresholds live in `src/config/index.ts` — never hard-code them.
