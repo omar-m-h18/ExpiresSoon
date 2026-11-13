@@ -1,465 +1,180 @@
-# Project Knowledge — ExpiresSoon
+# ExpiresSoon — architecture and operations
 
-This file is the living context for developers working on ExpiresSoon. It records
-architecture decisions, the anonymous-demo model, the production hosting/release
-setup, and the hard-won debugging facts from getting a deployed demo working.
-It complements `README.md` (setup, testing, deployment) and `AGENTS.md`
-(repo-specific commands and gotchas).
+Engineering context for this repo: the demo model, the status engine, hosting, CI,
+and the gotchas that cost time. Setup and commands live in `README.md` and
+`AGENTS.md`; this file is the "why" and the "watch out".
 
-> Keep this accurate as the code evolves. When behavior changes, update the
-> corresponding "gotcha"/"model" note here so the next engineer doesn't rediscover
-> it the hard way.
+## 1. What it is
 
----
+Track things that expire (licences, subscriptions, documents, insurance,
+warranties). Items carry title, category, expiration date, notes. Status
+(`active` / `expiring_soon` / `expired`) is **derived per request**, never stored.
 
-## 1. What this project is
+It ships as an anonymous live demo: no accounts, each visitor gets a private
+ephemeral room, plus a Tally.so waitlist.
 
-A web app to track things that expire — licenses, subscriptions, documents,
-insurance policies, certificates, etc. Items carry a title, category, expiration
-date, and notes. Status (`active` / `expiring_soon` / `expired`) is **derived at
-request time**, never stored. The dashboard shows summary counts, a "Needs
-Attention" list, and an "Expiring This Week" spotlight.
-
-It launched as an anonymous **live demo**: no accounts, every visitor gets a
-private ephemeral room of data, plus an early-bird email waitlist.
-
----
-
-## 2. Repository layout (pnpm monorepo)
+## 2. Layout
 
 ```
-ExpiresSoon/
-├── artifacts/
-│   ├── api-server/          # Express 5 REST API (the backend)
-│   │   └── src/
-│   │       ├── config/      # env-driven thresholds & APP_NAME
-│   │       ├── lib/         # session, status, logger, validation
-│   │       ├── seed/        # opt-in sample roster (reset endpoint only)
-│   │       ├── middlewares/ # requireSession, error-handler
-│   │       ├── repositories/# IItemsRepository + Drizzle impl, leads
-│   │       └── routes/      # items, leads, session, health, index
-│   ├── expiry-tracker/      # React 19 + Vite frontend; package @workspace/expires-soon
-│   │   └── src/             # pages, components, hooks, lib
-│   └── mockup-sandbox/      # scratch / throwaway playground (not the product)
-├── lib/
-│   ├── api-spec/            # openapi.yaml — single source of truth
-│   ├── api-zod/             # code-generated Zod schemas from the OpenAPI
-│   ├── api-client-react/    # code-generated TanStack Query hooks
-│   └── db/                  # Drizzle schema + db instance (@workspace/db)
-├── scripts/                 # workspace tooling / scripts package
-├── .github/workflows/ci.yml # CI pipeline
-└── .env.example             # annotated env reference
+artifacts/api-server/     Express 5 API          @workspace/api-server
+artifacts/expiry-tracker/ React 19 + Vite SPA    @workspace/expires-soon  (legacy folder name)
+lib/api-spec/             openapi.yaml — source of truth
+lib/api-zod/              generated Zod schemas
+lib/api-client-react/     generated TanStack Query hooks
+lib/db/                   Drizzle schema + client   @workspace/db
 ```
 
-Workspace packages that matter most: `@workspace/db`, `@workspace/api-zod`,
-`@workspace/api-client-react`, `@workspace/api-server`, and
-`@workspace/expires-soon`.
+## 3. The anonymous demo (core model)
 
-> **Naming gotcha:** the frontend folder is `artifacts/expiry-tracker/` but its
-> package name is `@workspace/expires-soon`. The two names differ on purpose (the
-> folder is a legacy Replit artifact path; the package was rebranded to
-> ExpiresSoon). Trust the `@workspace/*` package names in filters.
+Each visitor gets a **private room** keyed by a UUID in an `HttpOnly`,
+`SameSite=Lax`, **no-expiry** cookie (`expiresoon_demo`). Closing the browser ends
+the room. The cookie is `secure` only in production.
 
----
+The cookie is **signed**: `<uuid>.<base64url HMAC-SHA256>`, verified in constant
+time. `ownerId` is the tenancy key for every row, so an unsigned cookie would let
+anyone read, edit, or reset another room.
 
-## 3. How the anonymous demo works (the core model)
+- **Production requires `SESSION_SECRET`** or the API refuses to boot
+  (`openssl rand -base64 32`; set it in Render's environment). Dev/test use a fixed
+  insecure fallback.
+- Changing the secret invalidates every room. Give each environment its own.
 
-Every visitor gets a **private room** identified by a random UUID stored in an
-`HttpOnly`, `SameSite=Lax`, **no-expiry** session cookie named `expiresoon_demo`
-(`artifacts/api-server/src/lib/session.ts`). Because there's no
-`maxAge`/`expires`, the "room" dies when
-the browser (or a private window) closes — a truly ephemeral per-visitor demo
-with **zero accounts**. The cookie is `secure` only in production.
+Request lifecycle: `requireSession` -> `ensureSession` (verify or mint the cookie)
+-> sets `req.ownerId` -> `next()`. No database work, no seeding.
 
-### The cookie is SIGNED — `SESSION_SECRET` is required in production
-`ownerId` is the tenancy key for every item query, so the cookie is not just a
-claimed UUID. It is `<uuid>.<base64url HMAC-SHA256>` and the signature is
-verified in constant time before the id is trusted. Without this, a client that
-learned another visitor's room id could set it as its own cookie and read,
-modify, or (via `POST /api/session/reset`) delete that room's data.
+### Seeding and onboarding (opt-in only)
 
-Consequences worth knowing:
-- **The API refuses to start in production without `SESSION_SECRET`.** Generate
-  one with `openssl rand -base64 32` and set it in Render's Environment tab.
-  Development and test fall back to a fixed, clearly-insecure dev secret.
-- **Changing `SESSION_SECRET` invalidates every existing room.** Harmless for
-  ephemeral demo rooms, but it is a visible reset.
-- **Each environment needs its own secret** — otherwise a staging room would be
-  valid on production.
+Rooms are **not** seeded automatically, so a cold visitor costs zero writes (the
+free-tier compute limit is the constraint, not storage).
 
-### Request lifecycle
-1. `requireSession` middleware runs on every request.
-2. It calls `ensureSession(req, res)` → verifies the signed cookie, or mints a
-   new UUID and sets a fresh signed cookie. Returns `{ ownerId, isNew }`.
-3. It assigns `req.ownerId` and calls `next()`. **No database work, no seeding.**
-4. Routes/repositories then read/write rows scoped by `req.ownerId`.
+The empty room shows a 3-step interactive tour
+(`components/first-run/first-run-empty.tsx`): pick a preset -> watch the status
+badge change -> add your first item. Dismissal is stored in `sessionStorage`
+(`expiresoon_tutorial_skipped`) with a replay link.
 
-`isNew` is still returned by `ensureSession` but is no longer consumed by the
-middleware. It remains part of the `lib/session.ts` contract and is covered by
-`lib/session.test.ts`.
+The 4-item sample roster lives in `artifacts/api-server/src/seed/` and is written
+only by `POST /api/session/reset`. Its button renders only on an empty room, so it
+cannot destroy real items. Seeding is idempotent: an unlocked pre-check, then a
+transaction-scoped `pg_advisory_xact_lock(hashtext(ownerId))` plus re-check.
 
-### Sample data & interactive onboarding (opt-in only)
-**Rooms are not seeded automatically.** A cold visitor costs zero writes, protecting
-the free database tier's compute budget from visitors who only look and never return.
+### Limits (all in `config/index.ts`, documented in `.env.example`)
 
-Empty rooms feature an **interactive 3-step onboarding walkthrough**
-(`components/first-run/first-run-empty.tsx`) with preset item previews, automated status
-calculation demonstrations, and a clear choice between loading sample items and creating a
-custom item. Visitors can skip the tutorial at any time; dismissal state is saved in
-`sessionStorage` (`expiresoon_tutorial_skipped`) with a one-click option to replay the tour.
+| Limit | Default |
+|---|---|
+| Items per room (`MAX_ITEMS_PER_OWNER`) -> 409 | 10 |
+| Requests/IP/window across `/api` | 300 |
+| Session resets/IP/window | 10 |
+| Item creations/IP/window | 60 |
 
-The 4-item example roster lives in `artifacts/api-server/src/seed/` and is written by
-`POST /api/session/reset`, triggered by "Load 4 sample items" on the empty room screen.
-That button only renders when the room holds zero items, so it can never destroy real items.
+The limiter is **in-process**: behind N replicas the effective limit is xN. It keys
+on `req.ip`, which is correct only because `app.ts` sets `trust proxy` to exactly
+`1` — add another proxy hop and every client collapses into one bucket (and a
+spoofed `X-Forwarded-For` becomes possible).
 
-Seeding is idempotent:
-- A fast unlocked `SELECT … LIMIT 1` avoids opening a transaction when the room already holds items.
-- A transaction-scoped `pg_advisory_xact_lock(hashtext(ownerId))` plus in-transaction re-check prevents race conditions across API replicas.
+## 4. Status engine
 
-### Abuse limits & waitlist
-Bounds live in `config/index.ts` and are documented in `.env.example`:
+`lib/status.ts`: `computeStatus(date)` / `enrichItem(row)`.
 
-| Limit | Default | Enforced by |
-|---|---|---|
-| Items per room | 10 | `POST /items` → `409` (`MAX_ITEMS_PER_OWNER`), with UI quota banner |
-| Requests/IP/window across `/api` | 300 | global limiter in `app.ts` |
-| Session resets/IP/window | 10 | `routes/session.ts` |
-| Item creations/IP/window | 60 | `routes/items.ts` |
-| Early access waitlist | N/A | Delegated to Tally.so modal (`lib/tally.ts`, form `lbPjoV`) |
+- `expired` — before today · `expiring_soon` — within `EXPIRING_SOON_DAYS` (30) ·
+  `active` — otherwise.
+- `EXPIRING_THIS_WEEK_DAYS` (7) drives the dashboard "this week" bucket.
+- Uses UTC calendar midnights (`Date.UTC` + `Math.round`) so server timezone and
+  DST cannot shift the day count.
+- When building a Date from `YYYY-MM-DD`, append `T00:00:00` to force local-time
+  interpretation.
 
-> **Gotcha:** the limiter keeps counters **in process memory**. Behind multiple
-> API replicas the effective limit is `max × replicas`. Move the counters to a
-> shared store (Redis) before scaling horizontally.
->
-> **Gotcha:** the limiters key on `req.ip`, which is only the real client
-> address because `app.ts` sets `trust proxy` to exactly `1`. If you add another
-> proxy hop, that must be raised, or every client collapses into one bucket (and
-> a spoofed `X-Forwarded-For` becomes possible).
+## 5. Input validation (`lib/validation.ts`)
 
----
+- `expiration_date` must be a real `YYYY-MM-DD` date; `isValidDateOnly` rejects
+  impossible dates like `2026-02-31` that `Date.parse` would silently roll over.
+- Hand-written, not `format: date` in the spec: Orval is configured with
+  `useDates: true` + `coerce.body`, so `format: date` would generate
+  `zod.coerce.date()` and hand the repository a `Date` instead of the string its
+  column wants.
+- It fails closed on purpose: `computeStatus("banana")` is `NaN`, and every
+  comparison with `NaN` is false, so the item would be reported `active`.
+- `escapeLikePattern` escapes `\`, `%`, and `_` so search matches literally.
 
-## 3a. Input validation `lib/validation.ts`
+## 6. Hosting
 
-- `expiration_date` must be a **real calendar date** in `YYYY-MM-DD` form.
-  `isValidDateOnly` rejects malformed strings *and* impossible dates such as
-  `2026-02-31` (which `Date.parse` silently rolls into March).
-- **Why this is hand-written rather than `format: date` in the spec:** the Orval
-  config sets `useDates: true` with `coerce.body: ['bigint','date']`, so
-  `format: date` would generate `zod.coerce.date()` and hand the repository a
-  `Date` object instead of the `YYYY-MM-DD` string its column expects. The spec
-  uses `pattern`/`maxLength` instead; this module enforces at runtime.
-- **Why it fails closed:** `computeStatus` parses with
-  `new Date(\`${date}T00:00:00\`)`. For `"banana"` that is `NaN`, and *every*
-  comparison against `NaN` is false — so the item would be classified
-  **`active`**, i.e. reported as "not expiring". Failing closed matters more
-  than the error code.
-- `escapeLikePattern` escapes `\`, `%`, and `_` so a search term is matched
-  literally. Without it, searching for `%` matched every row. The surrounding
-  wildcards the repository adds are intentional.
+- Web: static Vite build on Netlify (`netlify.toml`, publish
+  `artifacts/expiry-tracker/dist/public`, Node 24).
+- API: Express on Render.
+- DB: Neon serverless Postgres.
 
----
+`artifacts/expiry-tracker/public/_redirects` proxies `/api/*` to the Render host —
+**if API calls fail, check this file still points at the live Render URL.**
 
-## 4. Status computation
-
-`artifacts/api-server/src/lib/status.ts` exposes `computeStatus(expirationDate)`
-and `enrichItem(row)`.
-
-- `expired`  → date is before today.
-- `expiring_soon` → within `EXPIRING_SOON_DAYS` (default 30).
-- `active`   → otherwise.
-- `EXPIRING_THIS_WEEK_DAYS` (default 7) feeds the dashboard "this week" bucket.
-
-Always append `T00:00:00` when constructing a `Date` from a `YYYY-MM-DD` string
-to force local-timezone interpretation and avoid a UTC-midnight off-by-one.
-Status is **derived at request time** — never persisted — via `getSummary()`,
-which reads only the needed `expiration_date` column.
-
----
-
-## 5. Infrastructure / hosting (the production reality)
-
-The **frontend runs on Netlify** (a static Vite build) and the **API runs on
-Render** (Node). They talk over a reverse proxy.
-
-### The critical proxy — `/api/*` → Render
-Netlify's `artifacts/expiry-tracker/public/_redirects` sends `/api/*` to the
-Render API host, otherwise the browser hits static-ish 404s for every API call.
-**If API calls fail/degrade, verify this file still points at the live Render
-URL.**
-
-```text
+```
 /api/*    https://expiresoon-api.onrender.com/api/:splat   200
 /*        /index.html   200
 ```
 
-### Netlify build config
-`netlify.toml` (repo root) pins the build:
+- `lib/db/src/index.ts` fails fast if `DATABASE_URL` is missing and sets
+  connection/query/idle timeouts so a dead DB errors instead of hanging.
+- TLS verification for the DB is **on** by default (`lib/db/src/ssl.ts`); opt out
+  only with `DATABASE_SSL_REJECT_UNAUTHORIZED=false`.
+- Index: `items_owner_id_expiration_date_idx` on `(owner_id, expiration_date)`.
+  The `search` `ILIKE '%term%'` path cannot use it (it would need `pg_trgm`), so
+  search is bounded by the per-room cap and the client debounce.
+- `GET /healthz` is served at the root **and** `/api/healthz`; the root route sits
+  outside the rate limiter so frequent probes don't count against it.
+- `index.ts` handles `SIGTERM`/`SIGINT`: drain, close the pool, exit 0 (10s cap,
+  idempotent). Render sends `SIGTERM` on every deploy.
 
-```toml
-[build]
-  command = "pnpm --filter @workspace/expires-soon run build"
-  publish = "artifacts/expiry-tracker/dist/public"
+## 7. CI
 
-[build.environment]
-  NODE_VERSION = "24"
-```
+`.github/workflows/ci.yml`, on push to `main` and on PRs. `typecheck-and-test`
+(ubuntu-24.04, ephemeral Postgres 16, `RUN_DB_TESTS=1`): checkout -> setup-node 24
+-> corepack pnpm 10.30.3 -> install -> typecheck -> `db push` -> Vitest.
+Do **not** add `cache: pnpm` to setup-node — it cannot find pnpm before corepack
+provides it.
 
-Netlify publishes Vite's `dist/public` (which also contains `_redirects`).
+`deploy-netlify` runs only after that passes and only on `main`.
+`nwtgck/actions-netlify` exits 0 without deploying if `NETLIFY_AUTH_TOKEN` /
+`NETLIFY_SITE_ID` are missing, so a green check does **not** prove the site updated.
 
-### The database is Neon (serverless Postgres)
-- `lib/db/src/index.ts` builds a `pg.Pool` from `DATABASE_URL`.
-- **Fail-fast startup:** if `DATABASE_URL` is missing it throws immediately
-  rather than creating a broken pool. It also sets `connectionTimeoutMillis` /
-  `query_timeout` / `idleTimeoutMillis` so a dead DB fails fast instead of
-  hanging requests (which read as "site loads slowly").
-- **TLS verification is ON by default** (`lib/db/src/ssl.ts`). Previously any
-  non-localhost URL got `rejectUnauthorized: false`, which silently disabled
-  certificate verification for every deployment. Opting out now requires an
-  explicit `DATABASE_SSL_REJECT_UNAUTHORIZED=false`. Localhost detection parses
-  the URL, so `localhost.example.com` is correctly treated as **remote**.
-- `closeDb()` closes the pool; `index.ts` calls it during graceful shutdown.
-- Schema lives in `lib/db/src/schema/*` (items, leads). Migrations are applied
-  with `pnpm --filter @workspace/db run push` (Drizzle Kit) against Neon.
-- **Indexes:** `items` has a composite
-  `items_owner_id_expiration_date_idx` on `(owner_id, expiration_date)`. It
-  serves owner-scoped lookups via its leftmost prefix *and* the list query's
-  filter+sort, so no sequential scan and no separate sort step. Run `push` to
-  create it.
-  > **Not indexed:** the `search` `ILIKE '%term%'` path cannot use a btree
-  > index. That would need a `pg_trgm` GIN index, which drizzle-kit does not
-  > create for us. Search is therefore bounded by the per-room item cap and the
-  > client-side debounce rather than by an index.
+## 8. Codegen
 
-### Health checks
-`GET /healthz` is served at **both** the root and `/api/healthz` (`app.ts`
-mounts the shared `healthCheck` handler in both places). Platform probes
-configured either way succeed instead of 404ing — a failing probe can get the
-instance recycled. The root route is deliberately outside the `/api` rate
-limiter, since probes are frequent and legitimate.
-
-### Graceful shutdown
-`index.ts` handles `SIGTERM`/`SIGINT`: stop accepting connections, drain
-in-flight requests, close the DB pool, exit `0`. Capped at 10 seconds, and
-idempotent (a second signal is ignored). Render sends `SIGTERM` on every deploy,
-so without this the process was killed mid-request and its pooled connections
-dropped. A bind failure (e.g. `EADDRINUSE`) logs at `fatal` and exits `1`
-instead of dying silently.
-
-### Env vars (see `.env.example`)
-| Variable | Purpose |
-|---|---|
-| `DATABASE_URL` | **Required.** Neon/Postgres connection string |
-| `SESSION_SECRET` | **Required in production.** Signs the session cookie; the API refuses to start without it |
-| `DATABASE_SSL_REJECT_UNAUTHORIZED` | Set to exactly `"false"` to disable DB TLS verification (default: verification on) |
-| `PORT` | API port |
-| `NODE_ENV` | `production` → JSON logging, secure cookies, required secrets |
-| `LOG_LEVEL` | Pino level |
-| `EXPIRING_SOON_DAYS` | default 30 |
-| `EXPIRING_THIS_WEEK_DAYS` | default 7 |
-| `APP_NAME` | logging name |
-| `FRONTEND_URL` | **Required in production.** CORS allow-list; the API refuses to start without it |
-| `MAX_ITEMS_PER_OWNER` | default 100 |
-| `RATE_LIMIT_WINDOW_MS` | default 60000 |
-| `RATE_LIMIT_MAX_GLOBAL` | default 300 |
-| `RATE_LIMIT_MAX_LEADS` | default 5 |
-| `RATE_LIMIT_MAX_RESET` | default 10 |
-| `RATE_LIMIT_MAX_ITEM_WRITES` | default 60 |
-
----
-
-## 6. CI (GitHub Actions)
-
-`.github/workflows/ci.yml` runs on every push to `main` and on pull requests.
-
-Job `typecheck-and-test` on `ubuntu-latest`, with an **ephemeral PostgreSQL 16
-service** and `RUN_DB_TESTS: "1"`:
-
-1. `actions/checkout@v4`
-2. `actions/setup-node@v4` with `node-version: 24` (match Render/Netlify so CI
-   catches the same bugs prod would see).
-   - **Do NOT set `cache: pnpm` here** — setup-node with pnpm caching can't find
-     the pnpm binary before corepack provides it (`Unable to locate executable
-     file: pnpm`).
-3. `corepack enable` + `corepack prepare pnpm@10.30.3 --activate` (uses the
-   `packageManager` field).
-4. `pnpm install`.
-5. `pnpm run typecheck` (recurses into all workspace packages).
-6. `pnpm --filter @workspace/db run push` (apply the schema to the CI Postgres).
-7. `pnpm --filter @workspace/api-server test` with `RUN_DB_TESTS: "1"`, so the
-   DB-backed owner-isolation tests (`*.owner.test.ts`) actually run.
-
-Job `deploy-netlify` runs **only after `typecheck-and-test` passes and only on a
-push to `main`** (never on a PR). It builds `@workspace/expires-soon` and deploys
-`artifacts/expiry-tracker/dist/public` to Netlify. It requires the repository
-secrets `NETLIFY_AUTH_TOKEN` and `NETLIFY_SITE_ID`. **If those secrets are
-missing, `nwtgck/actions-netlify` exits successfully without deploying**, so a
-green check does not by itself prove the live site was updated.
-
-### TypeScript build-order gotcha (TS6305 / TS6369)
-The api-server uses **project references** to `@workspace/db` and
-`@workspace/api-zod`, which are `composite` and emit to `dist/`. Typechecking the
-api-server **requires those `dist/*.d.ts` files to exist**. Use `tsc --build`
-(not a bare `--noEmit`) so the referenced projects build first.
-
-- The api-server `typecheck` script is `tsc --build tsconfig.json`.
-- **`--build` must be the first CLI argument** — `tsc -p tsconfig.json --build`
-  fails with `TS6369: Option '--build' must be the first command line argument`.
-- A missing referenced build manifests as a wall of `TS6305` errors plus
-  "implicit any" on things like a Drizzle callback — those implicit-any errors
-  are collateral of the missing `.d.ts`, **not** independent bugs.
-
----
-
-## 7. Codegen (OpenAPI-first)
-
-`lib/api-spec/openapi.yaml` is the single source of truth. Orval generates:
-- `lib/api-zod/` → server-side Zod schemas.
-- `lib/api-client-react/` → TanStack Query hooks.
-
-**Never hand-edit the generated files.** Change the `.yaml` and regenerate via
+`lib/api-spec/openapi.yaml` -> Orval -> `lib/api-zod` + `lib/api-client-react`.
+Never hand-edit the generated files; change the YAML and run
 `pnpm --filter @workspace/api-spec run codegen`.
 
-> **Caveat:** the codegen script ends with `pnpm -w run typecheck:libs`, which is
-> **not defined** in the root `package.json`. Generation succeeds but that final
-> step errors — run `pnpm run typecheck` afterwards instead.
+Known drift: the spec documents the reset endpoint as `POST /session`, but the
+server implements `POST /session/reset`, so the generated reset hook is unused.
 
-> **Spec drift:** `openapi.yaml` documents the reset endpoint as `POST /session`,
-> but the server implements `POST /session/reset`. The generated reset hook is
-> therefore not wired up.
+## 9. Local development gotchas
 
----
+- No Vite proxy — set `VITE_API_BASE_URL`.
+- `.env` is not auto-loaded (no dotenv dependency); pass vars via the shell.
+- The API `dev` script is bash-only and fails in PowerShell.
+- Both the API (`PORT || 5000`) and Vite (`PORT || 3000`) read `PORT` — don't
+  export the same value in both terminals.
 
-## 8. Making the live demo "private" and working
+## 10. Product and UI notes
 
-Transitioning from a shared "visible to anyone" demo to a per-visitor private
-demo involved:
+- 204: `DELETE /api/items/:id` returns 204 with an empty body; `parseResponse`
+  special-cases 204/205. Do not add an unconditional `response.json()` — the
+  delete toast regresses.
+- Client retry: `custom-fetch.ts` retries once, only on a quick network failure
+  (Render cold boot), never after a consumed timeout and never on HTTP errors.
+- Filters live in the URL; `useItemFilters` re-syncs `status` from the query string
+  (wouter matches pathname only, so a query change does not remount the list).
+- Search is debounced 300 ms and LIKE-escaped server-side, because each request is
+  an unindexed `%term%` scan.
+- Design tokens in `src/index.css`: explicit radius tiers (`sm` 6 -> `xl` 20 ->
+  `2xl` 24) so shape encodes hierarchy. `corner-shape: squircle` is progressive
+  enhancement (Chromium 139+ only) — never ship a design that *depends* on it, and
+  keep `corner-shape: inherit` on the `hover-elevate` overlays.
+- Motion respects `prefers-reduced-motion: reduce` (a block at the end of
+  `index.css`), with `.animate-spin` exempt. `framer-motion` is a dependency but is
+  never imported.
+- Fonts and the Tally embed are self-hosted / lazily injected to avoid leaking
+  visitor IPs to third parties. Do not reintroduce a font CDN or a static Tally
+  `<script>`. See the compliance section in `ROADMAP.md`.
 
-1. **Schema:** `items` gained a `NOT NULL owner_id`; a `leads` table was added.
-2. **Migration constraint:** because `owner_id` is `NOT NULL` with no backfill,
-   an `items` table already holding rows fails the column migration. The
-   intended safe path is to **clear legacy `items` rows** (Neon SQL editor or
-   drop table) before/at deploy — this is exactly why the old shared demo data
-   was deleted.
-3. **Deleting the old shared rows** is what made a fresh room able to get seeded
-   (seed guard = "room already has ≥1 item"). It's also what switched the
-   product from "everyone shares one set" to "a fresh room per visitor."
+## 11. Archived
 
-### Why "the website works but CI failed" for a while
-The live site working depends on **deployed code + live DB schema**; CI failing
-is a **separate** code hygiene/build-order concern. They can disagree. Netlify
-serves the last successful build even after auto-deploy is disabled, and
-DB-side fixes (schema, data) take effect instantly with **no redeploy** — which
-is why create-item / email-added / sample data could all work while CI was still
-red.
-
----
-
-## 9. Local development
-
-- **No Vite dev proxy.** Despite what older docs said, `vite.config.ts` has no
-  `server.proxy`. Locally the SPA calls `/api/*` on its own origin, so set
-  `VITE_API_BASE_URL=http://localhost:<api-port>` (e.g. `http://localhost:3001`)
-  before starting Vite, or those requests 404. This was the root of the
-  "delete button doesn't work locally" symptom.
-- **`.env` is not auto-loaded.** There is no `dotenv` dependency; processes read
-  `process.env` directly. Provide vars via the shell or an explicit `--env-file`.
-- **The API `dev` script is bash-only.** `artifacts/api-server/package.json`
-  uses `export NODE_ENV=development && ...`, which fails in PowerShell. On
-  Windows, build then `start` with `NODE_ENV` set in the shell (see README).
-- **Port overlap.** Both the API (`process.env.PORT || 5000`) and Vite
-  (`process.env.PORT || 3000`) read `PORT`; don't export the same value in both
-  terminals.
-
----
-
-## 10. Common operational notes
-
-- **Manual versus auto Netlify deploys:** auto-deploy can be left **off** so
-  only intentional builds ship; CI acts as the free gate. Turning auto-deploy off
-  doesn't un-serve the last successful build, so a healthy live site stays up
-  regardless of CI state.
-- **DB-backed owner isolation tests:** gated by `RUN_DB_TESTS=1` + a real
-  `DATABASE_URL`. They run in CI (Postgres is provisioned); locally they skip
-  unless you set both.
-- **Logs:** production uses structured JSON via Pino (`NODE_ENV=production`)
-  through the shared logger in `lib/logger.ts`. The api-server returns JSON
-  errors via a global error handler that **honours the error's `status`**: a
-  malformed JSON body is a `400` and an oversized body a `413` (both were
-  reported as `500` before), with 4xx logged at `warn` and 5xx at `error`.
-  Responses stay generic so internal details never leak. Zod validation failures
-  include a `details` object.
-- **204 responses:** `DELETE /api/items/:id` returns `204 No Content` with an
-  empty body. The client's `parseResponse` special-cases 204/205 — do not add an
-  unconditional `response.json()` or the delete toast will regress.
-- **Client retries:** `custom-fetch.ts` retries exactly once, and only on a
-  *quick* network failure (Render cold-booting and dropping the first
-  connection). It deliberately does **not** retry after a request has consumed
-  the 60-second timeout — doing so doubled a cold-boot wait to 120s. HTTP errors
-  and caller aborts are never retried.
-- **UI thresholds:** the spotlight CTA uses the server's `expiring_this_week`
-  count rather than re-deriving a 7-day window in the browser, so changing
-  `EXPIRING_THIS_WEEK_DAYS` cannot desync the UI. `StatusBadge`'s 60-day
-  countdown cap is a *display* choice only — it is not an expiry threshold.
-- **List filters live in the URL:** wouter matches on pathname only, so
-  `?status=expired` → `/demo/items` does **not** remount the list.
-  `useItemFilters` re-syncs `status` from the query string on every change; the
-  parsing itself is a pure function in `lib/item-filters.ts`.
-- **Search is debounced** (300 ms, `hooks/use-debounced-value.ts`) and LIKE
-  metacharacters are escaped server-side. Both exist because each request is an
-  unindexed `%term%` scan.
-- **Calendar popover width & cell sizing:** `components/ui/calendar.tsx` explicitly
-  defines a `w-[280px]` root with `w-9` weekday headers and `h-9 w-9` day buttons.
-  Without this, `react-day-picker` inside a zero-padding popover collapses its table
-  width to `min-content`, squishing weekday names into unreadable columns.
-- **Category quick-pick suggestions:** `pages/item-form.tsx` renders suggestion
-  pills (*Documents*, *Subscriptions*, *Insurance*, *Software*, *Warranties*, *Health*)
-  under the category input to accelerate entry without restricting custom values.
-- **Tutorial dismissal persistence:** The interactive onboarding in `first-run-empty.tsx`
-  stores its skipped state in `sessionStorage` (`expiresoon_tutorial_skipped`), so navigating
-  between `/demo` and `/demo/items` remembers user dismissal while retaining a replay link.
-- **Multi-surface early access integration:** Tally waitlist popup triggers (`lib/tally.ts`,
-  modal form `lbPjoV`) are placed across the top demo banner, desktop sidebar footer card,
-  mobile bottom tab bar, landing page hero, and an in-app list milestone callout.
-- **Design tokens live in `src/index.css`:** radius tiers are explicit
-  (`--radius-sm` 6px → `--radius-xl` 20px → `--radius-2xl` 24px) rather than
-  derived from one base, so shape encodes hierarchy — chips 6px, inputs 10px,
-  buttons 14px, cards 20px, large panels 24px. `--radius` is still defined
-  (10px) because `components/ui/input-group.tsx` computes
-  `calc(var(--radius) - 5px)` from it. Changing a tier restyles every `Card` at
-  once, since `ui/card.tsx` is the single `rounded-xl` definition. `2xl` is
-  defined explicitly — leaving it at Tailwind's 16px default would put it below
-  `xl` and invert the scale on the dashboard panels that use `rounded-2xl`.
-- **Squircle corners are progressive enhancement:** `corner-shape: squircle` is
-  applied under `@supports` to the `rounded-md/lg/xl/2xl` utilities. Only Chromium
-  139+ renders it; Safari and Firefox get the plain rounded fallback. The
-  `hover-elevate` / `toggle-elevate` pseudo-overlays need `corner-shape: inherit`
-  explicitly, because they rely on `border-radius: inherit` and `corner-shape`
-  is **not** an inherited property — omit it and hovered cards fringe at the
-  corners. Never ship a design that only looks correct with the squircle applied.
-- **Motion respects the OS setting:** a `prefers-reduced-motion: reduce` block at
-  the end of `index.css` (outside `@layer utilities`, so it wins the cascade)
-  collapses entrance animations and transitions to instant. `.animate-spin` is
-  exempted so the save spinner does not appear frozen. Any new animation must
-  degrade to "visible, no transform" under this query. This complements the
-  `motion-safe:` variants used by the Overview redesign, which gate entrance
-  animations but **not** hover `transition-*` utilities.
-- **`framer-motion` is a dependency but is never imported.** All current motion is
-  `tw-animate-css` (`animate-in fade-in slide-in-from-bottom-*`) on mount, plus
-  staggered `enterDelay()` inline styles in `pages/dashboard.tsx`. Do not assume
-  a motion library is wired up.
-- **Never load fonts or embeds from a third-party CDN.** DM Sans and Outfit are
-  vendored under `src/assets/fonts/` and declared with `@font-face` in
-  `index.css`; the Tally embed script is injected on first click by
-  `src/lib/tally.ts` rather than sitting in `index.html`. Both changes exist to
-  stop leaking visitor IPs to US processors before any interaction. Re-adding a
-  `fonts.googleapis.com` link or a static `<script src="...tally.so">` would
-  reintroduce the GDPR problem — see "Compliance follow-ups" in `ROADMAP.md`.
-- **`POST /leads` is deliberately unimplemented.** The endpoint is in the
-  OpenAPI contract, `leads` exists in the DB schema, and `useCreateLead` is
-  generated — but no route is mounted, so it 404s. The SPA collects waitlist
-  emails through Tally. Do not mount it without adding `consented_at`, `source`,
-  and `unsubscribe_token` first.
-- **Stale historical reports:** `CI_INCIDENT_LOG.md`,
-  `DELETE_BUTTON_INVESTIGATION.md`, and `IMPLEMENTATION_PLAN.md` are
-  point-in-time records kept for history; they may describe superseded states.
-  `CONTRIBUTING.md` is marked _under revamping_.
+`docs/archive/` holds finished point-in-time records (CI incident log, delete-button
+investigation, older implementation plans). They may describe superseded states —
+read them as history.

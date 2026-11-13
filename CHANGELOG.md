@@ -7,6 +7,27 @@ This project follows [Semantic Versioning](https://semver.org/) and
 
 ---
 
+## [Unreleased] — Documentation pass
+
+> Docs and config comments only. No code changes.
+
+### Changed
+- **Rewrote the live docs short and current:** `README.md`, `KNOWLEDGE.md`,
+  `ROADMAP.md`, `CONTRIBUTING.md` (was a "under revamping" stub), and
+  `decision documentation.md`.
+- **Moved finished point-in-time records into `docs/archive/`:**
+  `CI_INCIDENT_LOG.md`, `DELETE_BUTTON_INVESTIGATION.md`, `IMPLEMENTATION_PLAN.md`,
+  `d001-d007-summary.md`, `technical-implementation-plan.md`, and the unused Replit
+  scaffold `replit.md`. Added `docs/archive/README.md` as an index.
+- **Fixed drift found while rewriting:** `.env.example` claimed
+  `MAX_ITEMS_PER_OWNER=100` (the code default is 10) and documented a
+  `RATE_LIMIT_MAX_LEADS` variable that no longer exists; its header still carried the
+  old project name. Corrected the stale `expirytracker` database name in the
+  connection examples, and pointed the CI stale-bundle comment at the archived
+  investigation file.
+
+---
+
 ## [Unreleased] — Rename to ExpiresSoon
 
 > Rebrand only: display text, docs, package names, session/storage identifiers,

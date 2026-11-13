@@ -1,551 +1,188 @@
 # Roadmap
 
-Forward-looking work for the project: UI/UX for the SPA
-(`artifacts/expiry-tracker`), plus product and naming items in steps 7–9.
+Forward-looking work: UI/UX for the SPA (`artifacts/expiry-tracker`) plus two
+independent product items (first-run tour, RTL Arabic).
 
-This roadmap came out of an audit against three conversion/quality patterns
-(squircle geometry, scroll-driven motion, one-idea-at-a-time content). Items are
-ordered so that each step unblocks the next — in particular, **step 5 depends on
-step 4**, because the landing page currently fits inside a single viewport and
-therefore never scrolls.
-
-Legend: ✅ done · ⬜ planned · ⛔ deliberately rejected (see bottom)
-
-> **Note:** PR #11 (`feat/overview-redesign`) landed during this audit and
-> rewrote `pages/dashboard.tsx` plus `components/spotlight-action.tsx`. Steps 1
-> and 6 below are annotated accordingly — re-read the current dashboard before
-> acting on any dashboard item.
-
-> **Steps 7–9** come from a later product review rather than the original
-> conversion audit: an interactive first-run tour, a native RTL Arabic version,
-> and a project rename. They are independent of steps 1–6 and of each other.
+Legend: ✅ done · ⬜ planned · ⛔ rejected (see bottom)
 
 ---
 
-## ✅ Step 1 — Fix the build blocker (resolved upstream)
+## ⬜ Step 4 — Landing page: one idea at a time  (high)
 
-`src/pages/dashboard.tsx` rendered `<Button>` in three places (summary-error
-retry, needs-attention retry, spotlight retry) without importing it, so the file
-could not compile.
+**File:** `src/pages/landing.tsx` (only).
 
-**Status:** resolved by the Overview redesign (PR #11, `feat/overview-redesign`),
-which rewrote `dashboard.tsx` and imports `Button` at the top. No action needed
-here — the audit finding was fixed incidentally by that work.
+**Problem:** the page stacks seven ideas in one `max-w-2xl` column and asks for the
+same action three times (three waitlist CTAs). The demo-notice card duplicates
+`DemoBanner`.
 
----
+**Plan:** five full-bleed bands, Problem -> Solution -> Proof -> CTA:
 
-## ✅ Step 2 — Radius scale + squircle geometry
+1. **Hero** — H1 + one sentence + one CTA ("Start the demo").
+2. **"One date. That's the input."** — the add-item form as the visual.
+3. **"It tells you what's urgent."** — the three real status states via `StatusBadge`.
+4. **"Private by default."** — no signup, sandbox room, signed session.
+5. **Early access** — the single remaining waitlist ask + footer.
 
-The radius tokens were all derived from one base (`calc(var(--radius) ± 4px)`),
-yielding a 4–12px spread in which every surface had the same softness. Tokens are
-now explicit tiers (`sm` 6px → `xl` 20px → `2xl` 24px) and `corner-shape: squircle`
-is applied progressively to the `rounded-md/lg/xl/2xl` utilities, with
-`corner-shape: inherit` on the `hover-elevate` overlays.
+Each band: full-bleed background, inner `max-w-6xl`, one heading, <= 30 words, one
+visual, `min-h-[70vh]` on desktop.
 
-**Status:** complete. See `CHANGELOG.md`.
-
-**Known limitation:** squircle corners only render in Chromium 139+. Safari and
-Firefox show the plain rounded fallback, which is why the numeric radius tiers
-must look correct on their own — do not introduce a design that *depends* on
-superellipse geometry.
+**Acceptance:** exactly one primary CTA and one waitlist CTA; no band with more than
+one idea; visuals reuse `Card`/`StatusBadge`/`Input` (there are no screenshots); the
+Tally modal still opens.
 
 ---
 
-## ✅ Step 3 — Reduced-motion guard
+## ⬜ Step 5 — Scroll-driven motion  (medium · depends on step 4)
 
-A `prefers-reduced-motion: reduce` block collapses entrance animations and
-colour transitions, with `.animate-spin` exempted so the save spinner keeps
-turning.
+All motion today is one-shot on mount; nothing scrolls, so nothing is
+scroll-linked. `framer-motion` is a dependency but never imported.
 
-**Status:** complete.
+**Plan:** a ~20-line `useReveal` hook (`IntersectionObserver`) that toggles the
+existing `tw-animate-css` classes, plus a CSS-only status-card stack built from the
+real `Card` + `StatusBadge` with a subtle scroll-linked tilt. 200–300 ms ease-out,
+reveal once per session.
 
----
-
-## ⬜ Step 4 — Landing page: one idea at a time
-
-**Priority:** high · **Effort:** large · **File:** `src/pages/landing.tsx` (only)
-
-### Problem
-
-The landing page is a single `max-w-2xl` centered column inside
-`min-h-[100dvh]` that stacks **seven distinct ideas** in one glance: brand
-lockup, H1, subhead, demo-notice card, "Start the demo" CTA, "Join Waitlist"
-CTA, a second "Interested in self-hosting?" block with a **third** waitlist CTA,
-and a footer. Three competing asks for the same action is the core conversion
-defect. The demo-notice card also duplicates copy that `DemoBanner` already
-shows inside the app.
-
-### Plan
-
-Restructure into five full-bleed bands, following Problem → Solution → Proof → CTA:
-
-1. **Hero** — H1 + one sentence + exactly one CTA ("Start the demo").
-2. **"One date. That's the input."** — the add-item form as the visual, ≤2 lines of copy.
-3. **"It tells you what's urgent."** — the three real status states side by side,
-   rendered with the actual `StatusBadge` component.
-4. **"Private by default."** — no signup, sandbox room, HMAC-scoped session.
-   Absorbs the current demo-notice copy.
-5. **Early access** — the single remaining waitlist ask, plus footer.
-
-Each band: full-bleed background, inner `max-w-6xl`, one heading, ≤30 words of
-copy, one visual, `min-h-[70vh]` on desktop.
-
-### Acceptance criteria
-
-- Exactly one primary CTA and one waitlist CTA on the page (down from three).
-- No band contains more than one idea; no band exceeds ~30 words of body copy.
-- All visuals reuse existing components (`Card`, `StatusBadge`, `Input`) rather
-  than new imagery — there are no product screenshots in this project.
-- The Tally modal still opens from the remaining waitlist trigger.
-
-### Note
-
-This is the only step that changes the first impression of the product. Give it
-its own review rather than bundling it with steps 5–6.
+**Acceptance:** gated behind `prefers-reduced-motion`; no new runtime dependency; no
+layout shift (bands reserve their space).
 
 ---
 
-## ⬜ Step 5 — Scroll-driven motion on the landing page
+## ⬜ Step 6 — Dashboard density  (low · mostly done)
 
-**Priority:** medium · **Depends on:** step 4 · **Effort:** medium
+PR #11 rewrote `dashboard.tsx`: status tiles now carry share meters and % captions,
+a staggered entrance, and a proper "Needs attention" section.
 
-### Problem
-
-All motion in the app today is one-shot on mount (`animate-in fade-in
-slide-in-from-bottom-4`). Nothing responds to scroll, because nothing scrolls.
-`framer-motion` is listed in `package.json` but is **never imported** — do not
-assume it is wired up.
-
-### Plan
-
-- Add a small `useReveal` hook (~20 lines, `IntersectionObserver`) in
-  `src/hooks/`, toggling a class when a band enters the viewport. Reuse the
-  existing `tw-animate-css` utilities (`animate-in fade-in slide-in-from-bottom-*`)
-  rather than adding animation calls.
-- Build a CSS-only "status card stack" from the real `Card` + `StatusBadge`
-  components and give it a subtle scroll-linked `rotateX` / `translateY`
-  parallax. This is the "simulate holding the product" beat — it stays honest
-  because it is actual product UI, not a stock mockup.
-- Timing: 200–300 ms, ease-out. Reveal once per session, never re-trigger on
-  scroll-up.
-
-### Acceptance criteria
-
-- Motion is gated behind the existing `prefers-reduced-motion` guard — with
-  reduce-motion enabled, bands are simply visible with no transform.
-- No new runtime dependency; `framer-motion` stays unused (or is removed from
-  `package.json` as dead weight).
-- No layout shift: bands reserve their space before revealing.
+**What's left (optional):** decide whether `Total items` still deserves equal grid
+weight now that it carries a status-mix bar; if not, demote it to a quiet header row.
+**Non-goal:** do not add `rotateY`/`scale` scroll transforms to data surfaces — it
+hurts scanability of dates and statuses.
 
 ---
 
-## ⬜ Step 6 — Dashboard density (largely resolved upstream)
+## ⬜ Step 7 — First-run tour commits the first item  (high · ~half a day)
 
-**Priority:** low · **Effort:** small · **File:** `src/pages/dashboard.tsx`
+**File:** `src/components/first-run/first-run-empty.tsx`.
 
-### Problem (as originally audited)
+**Problem:** the tour teaches then discards — the user picks a preset and a timeline,
+sees a real preview card, then step 3 sends them to an empty form.
 
-Four summary cards (`Total Items`, `Active`, `Expiring Soon`, `Expired`) carried
-identical visual weight, giving a number that implies no urgency the same
-prominence as "Expired". The four-across grid was also the densest block in the
-product.
+**Plan:** make step 3 a **commit** step. Everything needed is already in component
+state (`selectedPreset`, `selectedTimeline`) and `useCreateItem` exists. Show a
+summary ("We will create **Passport** · Documents · expires 12 Mar 2027 ·
+*Expiring soon*"), disable while pending, catch 409, then land on `/demo/items`.
+Keep "I'll do it myself" and "Skip tour".
 
-### What the Overview redesign already fixed
+**Gotcha:** the API needs `YYYY-MM-DD` from local parts — do **not** use
+`toISOString()` (timezone shift). And step 2 *promises* a status the server
+*computes*: with defaults they agree, but lowering `EXPIRING_SOON_DAYS` would make
+the tutorial lie — derive offsets from `config/index.ts` or document the coupling.
 
-PR #11 shipped most of this step:
+**Acceptance:** creates exactly one item and lands on `/demo/items`; the status
+matches the step-2 badge; a double-click cannot create two; the written date is the
+local calendar date (verify under `TZ=Pacific/Kiritimati`); both escape hatches work.
 
-- Each status tile now carries a share meter (`role="meter"`) and a `% of items`
-  caption, so the tiles are no longer four bare numbers.
-- Tiles enter with a staggered `enterDelay()` sequence, gated behind
-  `motion-safe:` — the stagger this step called for already exists.
-- "Needs Attention" is now "Needs attention" with an icon-state component and
-  proper `aria-labelledby`.
-
-### What remains (optional)
-
-Only one question is left: whether `Total items` should keep equal grid weight
-now that it carries a status-mix bar. If revisited, demote it to a quieter
-header row; the three status tiles are the actual triage decision.
-
-### Acceptance criteria
-
-- Three status tiles remain clickable and preserve their filter hrefs.
-- Total count stays visible without scrolling.
-- Any new motion stays gated behind `prefers-reduced-motion` (the global guard in
-  `index.css` already covers transitions, which `motion-safe:` alone does not).
-
-### Explicit non-goal
-
-Do **not** add `rotateY` / `scale` scroll transforms to dashboard cards or table
-rows. Scroll-driven product-tilt is a marketing-surface pattern; in a data tool
-it degrades scanability of dates and statuses.
+**Test matrix:** 4 presets x 3 timelines, plus the double-click and 409 paths.
 
 ---
 
-## ⬜ Step 7 — First-run tour commits the first item
+## ⬜ Step 8 — Native RTL Arabic version  (medium · ~1 week + a native writer)
 
-**Priority:** high · **Effort:** half a day · **File:** `src/components/first-run/first-run-empty.tsx`
+> ASD-STE100 is a controlled **English** standard — it does not apply to Arabic.
+> Do not translate the STE100 rules. A separate Arabic style guide is needed.
 
-### Problem
+**Current state:** no localization; `<html lang="en">` with no `dir`; all text
+hardcoded English; DM Sans/Outfit have no Arabic glyphs. Direction work is small —
+**32 direction-dependent utilities across 15 files** (`ml-` 3, `mr-` 9, `pl-` 4,
+`left-` 3, `right-` 3, `text-left/right` 4, `translate-x` 6).
 
-The 3-step tour teaches and then discards. The user picks a preset (Passport,
-Car Insurance, Netflix, example.com) and a timeline (1 year / 2 weeks / 5 days
-ago), sees a realistic preview card with a real `StatusBadge` — and step 3 hands
-them a link to `/demo/items/new`, an empty form. Every choice is thrown away, and
-the payoff the tour just promised is replaced by a blank page.
+**Plan:**
 
-### What already exists
+1. **Direction** — set `lang`/`dir`; set `dir="rtl"` before first paint via an
+   inline script in `index.html` (setting it in React flashes LTR first); swap
+   physical for logical utilities (`ml-`->`ms-`, `pl-`->`ps-`, `left-`->`start-`,
+   `text-left`->`text-start`); mirror directional icons. The `flex-row` sidebar
+   moves right on its own.
+2. **Font** — self-host IBM Plex Sans Arabic or Noto Sans Arabic (**not** a CDN —
+   that reintroduces the GDPR problem). Never apply `letter-spacing`/`tracking-tight`
+   to Arabic; raise line-height to ~1.7.
+3. **Strings** — ~40 user-facing strings. Prefer a typed dictionary + `useLocale()`
+   (`Intl.PluralRules` handles Arabic plurals) over adding `react-i18next`.
+4. **Dates/plurals** — pass the active locale to `toLocaleDateString` and import the
+   `date-fns` `ar` locale; Arabic has six plural categories (use
+   `Intl.PluralRules("ar")`); pick one digit set; wrap Latin text in `<bdi>`.
+5. **Server messages** — return stable error codes or map client-side; no English
+   text in an Arabic UI.
+6. **Content** — use a native Arabic writer (**do not machine-translate**); swap
+   presets for local documents (*Iqama*, *Istimara*, passport, medical insurance);
+   decide on Hijri dates; the Tally form is English-only.
 
-Everything needed is already in component state: `selectedPreset` holds `name` +
-`category`, `selectedTimeline` holds `daysOffset`, and `simulatedDateString` is
-computed. `useCreateItem` exists and is used in `item-form.tsx`. `FirstRunEmpty`
-only renders when `useRoomIsEmpty()` is true, so the room is guaranteed empty —
-no duplicate-item risk.
-
-### Plan
-
-Turn step 3 into a **commit step** instead of a redirect:
-
-1. **Local-safe date helper.** `simulatedDateString` is a display string
-   (`toLocaleDateString`), not an API value. The API needs `YYYY-MM-DD`, computed
-   from local parts. **Do not use `toISOString()`** — it shifts the date by the
-   timezone offset (the trap already documented in `lib/utils.ts`).
-2. **Wire the mutation.** `useCreateItem` + `useQueryClient` + `useNavigate`.
-   Payload: `title = preset.name`, `category = preset.category`,
-   `expiration_date = offset(timeline.daysOffset)`.
-3. **Summary card before the button.** "We will create **Passport** ·
-   Documents · expires 12 Mar 2027 · *Expiring soon*". The user sees exactly what
-   will be written, so auto-creation is never a surprise.
-4. **Pending + error states.** Disable while `isPending` (prevents double-create);
-   catch 409 with a toast.
-5. **Land on `/demo/items`**, not the dashboard — the payoff is seeing their own
-   row with the status badge the tour just promised.
-6. **Keep both escape hatches:** "I'll do it myself" → the existing form, and
-   "Skip tour" unchanged.
-
-### The real gotcha
-
-Step 2 *promises* a status and the server *computes* it independently. With
-defaults these agree (14 days ≤ `EXPIRING_SOON_DAYS` 30 → expiring soon; 365 →
-active; −5 → expired). But if `EXPIRING_SOON_DAYS` is lowered to 10, the tour
-would promise "Expiring soon" and create an "Active" item — the tutorial would be
-lying. Either derive the timeline offsets from `config/index.ts`, or accept the
-coupling and document it in a comment.
-
-### Acceptance criteria
-
-- Step 3 creates exactly one item and navigates to `/demo/items`.
-- The created item's status matches the badge shown in step 2 under default config.
-- Double-clicking the commit button cannot create two items.
-- The date written to the API is the local calendar date, verified in a
-  non-UTC timezone (e.g. `TZ=Pacific/Kiritimati`).
-- "I'll do it myself" and "Skip tour" still work.
-
-### Test matrix
-
-4 presets × 3 timelines = 12 paths, plus the double-click and 409 paths.
-
-### Optional upgrade
-
-Let the user edit the title inline at step 3, so the entry is *theirs* rather
-than a preset name.
+**Acceptance:** RTL check passes on all 5 routes, light and dark; plurals correct
+for 0/1/2/3–10/11–99/100; dates correct in the popover and list rows; Latin text
+does not reorder; no LTR flash on reload; no English string reachable from the
+Arabic UI.
 
 ---
 
-## ⬜ Step 8 — Native RTL Arabic version
+## ✅ Done
 
-**Priority:** medium · **Effort:** ~1 week + a native Arabic writer · **Depends on:** nothing
-
-> **Scope note:** ASD-STE100 is a controlled **English** standard. It does not
-> apply to Arabic text. A separate Arabic style guide is required. Do not
-> translate the STE100 rules into Arabic.
-
-### Current state
-
-No localization layer exists. `<html lang="en">` has no `dir` attribute. All text
-is hardcoded English. DM Sans and Outfit have no Arabic glyphs.
-
-Direction work is small: **32 direction-dependent utilities across 15 application
-files** — `ml-` 3, `mr-` 9, `pl-` 4, `left-` 3, `right-` 3, `text-left/right` 4,
-`translate-x` 6. One logical utility already exists.
-
-### Plan
-
-**1. Direction layer**
-
-- Set `lang` and `dir` on `<html>`.
-- Set `dir="rtl"` **before first paint** via a small inline script in
-  `index.html`. Setting it in React flashes left-to-right first.
-- Replace physical utilities with logical ones: `ml-` → `ms-`, `pl-` → `ps-`,
-  `left-` → `start-`, `text-left` → `text-start`, `translate-x` → `rtl:` variants.
-- The sidebar uses `flex-row` and moves to the right automatically — no special
-  code.
-- Mirror directional icons: `ArrowRight`, `ArrowLeft`, `ChevronRight`,
-  `ArrowUpRight`.
-
-**2. Arabic font**
-
-- Add IBM Plex Sans Arabic or Noto Sans Arabic. **Self-host it** — a font CDN
-  reintroduces the GDPR problem fixed in the compliance work above.
-- **Never apply `letter-spacing` / `tracking-tight` to Arabic.** Arabic letters
-  connect; extra spacing breaks the joins.
-- Raise line-height to ~1.7 and the base font size by ~1px.
-
-**3. String layer**
-
-~40 user-facing strings: 28 visible, 4 placeholders, 5 `aria-label`, 6 toast
-titles.
-
-| Option | Cost | Verdict |
-|---|---|---|
-| Typed dictionary + `useLocale()` hook | No new dependency | **Recommended** — the string count is small, and `Intl.PluralRules` gives Arabic plurals for free |
-| `react-i18next` | New dependency + lockfile change | Only if more than two languages are planned |
-
-The dictionary matches project style and the same reasoning that led to
-vendoring fonts rather than adding `@fontsource`.
-
-**4. Dates, numbers, plurals**
-
-- `lib/utils.ts` and `dashboard.tsx:420` use `toLocaleDateString(undefined, …)`.
-  Pass the active locale so UI and date language always match.
-- `item-form.tsx` uses `date-fns` `format(date, "MMM d, yyyy")` — hardcoded
-  English. Import the `ar` locale.
-- `StatusBadge` uses English plural logic (`days === 1 ? "day" : "days"`).
-  **Arabic has six plural categories** — use `Intl.PluralRules("ar")`, not a
-  second English-style rule.
-- Pick one digit set (Western `0123` or Arabic-Indic `٠١٢٣`) and use it everywhere.
-- Isolate Latin text inside Arabic (`example.com`) with `<bdi>` or a `dir="ltr"`
-  span so it cannot reorder.
-
-**5. Server messages**
-
-The API returns English strings that surface in toasts:
-
-- `"expiration_date must be a real date in YYYY-MM-DD format"`
-- `"Too many items created. Please slow down."`
-- `"This demo room is limited to N items…"`
-
-Return stable error codes, or map messages client-side. English text must not
-appear in an Arabic interface.
-
-**6. Content**
-
-- Use a native Arabic writer. **Do not machine-translate** — that is the
-  difference between "made by Arabs" and "made for Arabs".
-- Replace generic presets with locally familiar documents: *Iqama* (residency
-  permit), *Istimara* (vehicle registration), passport, medical insurance.
-- Decide whether Hijri (*هـ*) dates appear beside Gregorian (*م*).
-- The Tally waitlist form is English only — either accept the gap or replace it.
-
-### Acceptance criteria
-
-- RTL visual check passes on all 5 routes, light and dark.
-- Plural forms correct for 0, 1, 2, 3–10, 11–99, 100 days.
-- Dates correct in the calendar popover and in list rows.
-- Latin text (`example.com`) does not reorder inside Arabic sentences.
-- Reloading with a saved locale shows **no** left-to-right flash.
-- No English string is reachable from an Arabic UI, including error toasts.
-
-### Notes
-
-- `react-day-picker` already has `rtl:` variants for its arrows in
-  `ui/calendar.tsx` — verify rather than reimplement.
-- The Arabic writer is the long pole. Start that work first; the code is the
-  shorter half.
-
----
-
-## ✅ Step 9 — Rename the project (done)
-
-**Priority:** low (do it before launch, not after) · **Effort:** 1 day · **Blocks:** nothing
-
-### Problem
-
-The previous name read as a feature flag, not a brand, and its `.com` namespace was
-partly taken. **Decision: renamed to `ExpiresSoon`** — `expiresoon.com`, `.io`,
-`.app`, `.netlify.app` and `.onrender.com` are all free (verified 2026-11-09).
-
-### Research already done
-
-A two-round naming exercise (100 candidates, 2 shortlists) was run, then screened
-against live registries. Method notes, because they matter if this is redone:
-
-- Domain status came from RDAP, **with controls** (`google.com` → 200, random
-  string → 404). Two endpoints were **discarded as broken**: `rdap.org` for
-  `.io` reported `github.io` as free, and `rdap.org` for `.co` reported
-  `google.co` as free.
-- Reliable sources: Verisign RDAP (`.com`), Identity Digital RDAP (`.io`),
-  `rdap.org` (`.app`, `.dev`).
-- **Finding: of 106 `.com` candidates, only 11 were free.** Every plain-English
-  name in this category is already registered — `useby.com`, `bestbefore.com`,
-  `stillgood.com`, `goodtill.com`, `daysleft.com`, `shelflife.com`. `.com` is not
-  a realistic target for this vocabulary; a coined name on `.app`/`.io` is.
-
-### Finalists (domain status verified)
-
-| Name | `.com` | `.io` | `.app` | `.dev` |
-|---|---|---|---|---|
-| **Expirary** | FREE | FREE | FREE | FREE |
-| **Duenary** | FREE | FREE | FREE | FREE |
-| **Expirique** | FREE | FREE | FREE | FREE |
-| **ExpiryMark** | FREE | FREE | FREE | FREE |
-| **SoonTrack** | FREE | FREE | FREE | FREE |
-| **Lapsary** | FREE | FREE | FREE | FREE |
-| **Lapsely** | taken | FREE | FREE | FREE |
-
-All seven are free on npm and as GitHub usernames, and none has a live company or
-product footprint.
-
-### Recommendation
-
-**`Expirary` — `expirary.com`.** The only finalist free on all four TLDs with no
-trademark collision surfaced. Owns the category, transliterates cleanly to Arabic
-(إكسبيراري), and the existing `E` mark still works.
-
-Runner-up **`Lapsely`** (`lapsely.io`) is more brandable but loses the `.com` and
-carries "lapse" — a word meaning *failure* — in a product whose promise is that
-you won't forget.
-
-### Outcome (supersedes the recommendation above)
-
-**`ExpiresSoon` was chosen and applied.** It is plain English, needs no teaching,
-and is the sentence the product itself emits. It is free on `.com`, `.net`, `.org`,
-`.io`, `.app`, `.dev`, `.co`, npm, and on GitHub/Netlify/Render slugs — but it is a
-generic phrase, so it is a get-by name, not a mark to build a moat on.
-
-### ⚠️ This is a preliminary screen, not a clearance opinion
-
-- USPTO TESS/API returned 404 (endpoint retired), TMview refused connections
-  (WAF), and Justia's USPTO mirror sat behind a Cloudflare challenge. No exact
-  mark surfaced through the accessible index, but **the primary registers were
-  not queried directly.**
-- Before filing or printing: run a formal search in **Nice classes 9 (software)
-  and 42 (SaaS)** across USPTO, EUIPO, and UKIPO (~$200–500).
-- Descriptiveness cuts both ways: `Expirary`, `ExpiryMark`, `UseBy` are close to
-  the generic term — low infringement risk, but **weak protection**. `Lapsely`,
-  `Duenary`, `Expirique` are arbitrary marks and much stronger to enforce.
-- RDAP 404 can include pending-delete domains. Confirm at a registrar before
-  committing.
-
-### Rename surface (measured)
-
-| Location | Occurrences |
-|---|---|
-| `first-run/first-run-empty.tsx` | 8 |
-| `README.md` | 6 |
-| `artifacts/expiry-tracker/index.html` | 6 |
-| `README.STE100.md` | 5 |
-| `KNOWLEDGE.md` | 4 |
-| `landing.tsx` | 3 |
-| `api-server/src/config/index.ts` | 2 |
-| `DELETE_BUTTON_INVESTIGATION.md` | 2 |
-| `layout.tsx`, `items-list.tsx`, `lib/tally.ts`, `netlify.toml`, `AGENTS.md`, `CONTRIBUTING.md`, `technical-implementation-plan.md`, `.replit-artifact/artifact.toml`, `.agents/memory/config.md` | 1 each |
-| `lib/api-spec/openapi.yaml` (`info.description`) | 1 → regenerates ~19 generated files |
-
-**Identifiers that are not just display strings:**
-
-- `SESSION_COOKIE = "expiresoon_demo"` (`api-server/src/lib/session.ts:28`) —
-  renaming it invalidates every existing anonymous room. Acceptable pre-launch;
-  **not** acceptable after launch without a migration.
-- `sessionStorage` key `expiresoon_hide_early_access_callout`
-  (`items-list.tsx:60,66`).
-- `DEV_FALLBACK_SECRET` contains `expiresoon-…` (`session.ts:37`) — dev only.
-- Error message example URL `https://expiresoon.netlify.app` (`app.ts:35`).
-- Package names: `@workspace/expires-soon` and root `expires-soon`.
-
-Generated files under `lib/api-zod` and `lib/api-client-react` are Orval output —
-**never hand-edit**; change `openapi.yaml` and re-run codegen.
-
-### Acceptance criteria
-
-- `grep -ri expiresoon` returns only `CHANGELOG.md` history and intentional
-  migration notes.
-- `pnpm run typecheck` passes after codegen.
-- No cookie-name change ships after launch without a session migration.
+- **Step 1** — dashboard build blocker: fixed by the Overview redesign (PR #11).
+- **Step 2** — explicit radius tiers + progressive `corner-shape: squircle`.
+- **Step 3** — `prefers-reduced-motion` guard.
+- **Step 9** — renamed to **ExpiresSoon** (free on `.com`/`.io`/`.app`/npm and the
+  GitHub/Netlify/Render slugs). A get-by name, not a trademark moat; no formal
+  clearance search was run.
 
 ---
 
 ## ⛔ Deliberately rejected
 
-Recorded so these are not re-litigated later.
-
 | Idea | Why not |
 |---|---|
-| `border-radius: 24px 22px 20px 18px` | Four asymmetric corners is not a squircle — it reads as a rendering bug. Use `corner-shape` or a symmetric tier. |
-| `snap-y snap-mandatory` on mobile | The page hosts a form and a Tally modal; mandatory snap traps touch scrolling and fights iOS address-bar resize. `snap-proximity` at most. |
-| Splitting the add-item form into multiple screens | `item-form.tsx` is already correctly chunked (name → date/category → notes → actions). Splitting it would add friction, not reduce cognitive load. |
-| Restructuring the 3-step first-run tour | `first-run-empty.tsx` already implements one idea per step. No change needed to the *structure* — Step 7 changes what step 3 *does* (commit instead of redirect), not how the steps are divided. |
-| Adding a chart to the dashboard | `recharts` is a dependency but no chart exists. Expiry data is a triage list, not a time series — a chart would add an idea, not clarify one. |
-| `UseBy`, `BestBefore`, `StillGood` as the new name | The best semantic fits in the category, but all three are registered on `.com`, `.io`, **and** `.app`. A rename that trades a distinctive name for a contested one is not a win. |
-| Latin-derived names (`Perimo`, `Deficio`, `Evanesco`) | Read as pharmaceutical brands, and Latin marks are hard to police against similar coinages. |
-| `Lapsive` as a candidate | Reads as "laxative". |
-
----
-
-## Verification for any step
-
-```bash
-pnpm run typecheck                                        # primary gate
-pnpm --filter @workspace/expires-soon run dev                # visual pass
-```
-
-Visual checklist for shape/motion changes: light **and** dark mode; a hover on an
-items-list row (that is where `corner-shape: inherit` either works or does not);
-and the OS "reduce motion" toggle.
+| `border-radius: 24px 22px 20px 18px` | Not a squircle — reads as a rendering bug. Use `corner-shape` or a symmetric tier. |
+| `snap-y snap-mandatory` on mobile | The page hosts a form and a Tally modal; mandatory snap traps touch scrolling and fights iOS address-bar resize. |
+| Splitting the add-item form into screens | `item-form.tsx` is already correctly chunked; splitting adds friction. |
+| Restructuring the 3-step tour | It already implements one idea per step — step 7 changes what step 3 *does*, not the structure. |
+| A dashboard chart | Expiry data is a triage list, not a time series. `recharts` is a dependency but unused. |
+| `UseBy` / `BestBefore` / `StillGood` as the name | Best semantic fits, but all registered on `.com`, `.io`, and `.app`. |
+| Latin-derived names (`Perimo`, `Deficio`, `Evanesco`) | Read as pharmaceutical brands; hard to police. |
+| `Lapsive` | Reads as "laxative". |
 
 ---
 
 ## Compliance follow-ups
 
-Findings from the legal-compliance audit that are **not** UI work. Ordered by
-risk. Statutory figures are maximums, not expectations; none of this is legal
-advice — have counsel review before launch.
+Not UI work. Statutory figures are maximums; this is not legal advice — have counsel
+review before launch.
 
 ### ✅ Fixed
 
-- **Third-party font CDN (GDPR).** `index.html` and `index.css` loaded DM Sans,
-  Outfit, and an unused Inter from `fonts.googleapis.com`, transmitting every
-  visitor's IP to a US third party before any interaction. Fonts are now
-  self-hosted via `@fontsource/dm-sans` and `@fontsource/outfit` (OFL-1.1) and
-  bundled by Vite. The unused Inter link and both `preconnect` hints were
-  removed.
-- **Tally embed loaded before consent (GDPR / ePrivacy).** The embed script was a
-  static `<script async>` that fired on every page view. It is now injected on
-  first waitlist click (`src/lib/tally.ts`, memoised, 4s timeout, falls back to a
-  new tab). The inert `data-tally-*` attributes were removed from all six CTAs
-  so `onClick` is the single source of truth and cannot double-fire.
-- **No transparency at the collection point (GDPR Art. 13).** Added a purpose and
-  opt-out line directly under the landing CTA.
-- **`notes` field invited sensitive identifiers (GDPR Art. 5(1)(c)).** The
-  placeholder asked for "account numbers"; it now asks for a renewal reference
-  and carries a "don't store passwords, card details, or ID numbers" helper.
+- **Third-party font CDN (GDPR)** — DM Sans/Outfit/Inter are now self-hosted; the CDN
+  link and `preconnect` hints were removed.
+- **Tally embed loaded before consent** — the script is now injected on first
+  waitlist click (`src/lib/tally.ts`), not statically in `index.html`.
+- **No transparency at collection (Art. 13)** — a purpose + opt-out line was added
+  under the landing CTA.
+- **`notes` invited sensitive IDs (Art. 5(1)(c))** — the placeholder now asks for a
+  renewal reference, with a "don't store passwords/cards/IDs" helper.
 
 ### ⬜ Open
 
-- **`/api/leads` is declared but unimplemented.** Documented with warnings in
-  `lib/api-spec/openapi.yaml` and `lib/db/src/schema/leads.ts`. **Do not mount
-  the route** until the table has `consented_at`, `source`, and
-  `unsubscribe_token`. The SPA uses Tally instead.
-- **No privacy policy or terms page.** Nothing links to one; `grep -i privacy`
-  returns nothing. Required before launch — needs legal entity name, contact
-  address, and the sub-processor list (Neon, Render, Netlify, Tally).
-- **No unsubscribe path (CAN-SPAM / GDPR Art. 7(3)).** No email is sent today, so
-  no violation exists yet. Before the first send: signed unsubscribe token,
-  one-click endpoint, postal address in the footer, and honour opt-outs within
-  10 business days.
-- **No retention policy or user-facing erasure (Art. 5(1)(e), Art. 17).**
-  `POST /session/reset` clears a room, but its only UI trigger is behind
-  `SHOW_SAMPLE_BUTTON = false`. Abandoned rooms persist in Neon indefinitely. Add
-  a "Delete my data" action and a scheduled sweep.
-- **No processor agreements / transfer mechanism (Art. 28, Chapter V).** All five
-  vendors are US-hosted. DPAs plus SCCs or the Data Privacy Framework.
+- **`/api/leads` declared but unimplemented** — do not mount until the table has
+  `consented_at`, `source`, and `unsubscribe_token`. The SPA uses Tally.
+- **No privacy policy or terms page** — required before launch; needs the legal
+  entity, contact address, and sub-processor list (Neon, Render, Netlify, Tally).
+- **No unsubscribe path** — no email is sent yet; add a signed token, a one-click
+  endpoint, and a postal address before the first send.
+- **No retention or erasure** — rooms persist in Neon indefinitely. Add a "Delete my
+  data" action and a scheduled sweep.
+- **No processor agreements (Art. 28, Ch. V)** — all vendors are US-hosted; need DPAs
+  plus SCCs or the Data Privacy Framework.
 
-### ⛔ Not applicable — do not spend effort
+### ⛔ Not applicable
 
-| Item | Why |
-|---|---|
-| Session replay / keystroke logging (CIPA) | Zero analytics, replay, or heatmap libraries exist. No exposure. |
-| Age gate / COPPA | No signup, no accounts, general-audience tool. Add a "13 or older" line to the waitlist form only. |
-| Auto-renewal disclosure / checkout | No payment code. Revisit if billing ships. |
-| Upload content disclaimer | No upload feature exists. |
-| Cookie consent banner | The only cookie is the strictly-necessary `expiresoon_demo` session cookie (HttpOnly, SameSite=Lax, Secure in prod). ePrivacy Art. 5(3) exempts it — a banner would be theatre. Document it in the privacy policy instead. |
+- Session replay / keystroke logging — no analytics libraries exist.
+- Age gate / COPPA — no accounts; add a "13 or older" line to the waitlist form only.
+- Auto-renewal disclosure — no payment code.
+- Upload disclaimer — no upload feature.
+- Cookie banner — the only cookie is the strictly-necessary `expiresoon_demo`
+  session cookie (ePrivacy Art. 5(3) exempts it). Document it in the privacy policy.

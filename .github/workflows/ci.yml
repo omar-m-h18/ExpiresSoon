@@ -99,7 +99,7 @@ jobs:
       # unconditionally, so HTTP 204 (returned by DELETE /items/{id}) threw a
       # SyntaxError and the UI reported "Failed to delete item" even though the
       # row was deleted. If a build ever produces this hash again, stop here
-      # rather than shipping it. See DELETE_BUTTON_INVESTIGATION.md.
+      # rather than shipping it. See docs/archive/DELETE_BUTTON_INVESTIGATION.md.
       - name: Guard against stale bundle
         run: |
           if grep -q "index-C2cMtcLG.js" artifacts/expiry-tracker/dist/public/index.html; then

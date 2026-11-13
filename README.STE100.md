@@ -101,7 +101,7 @@ Do these steps in the specified sequence:
 
 3. Set the database connection string in your terminal environment:
    ```bash
-   export DATABASE_URL="postgresql://postgres:password@localhost:5432/expirytracker"
+   export DATABASE_URL="postgresql://postgres:password@localhost:5432/expiresoon"
    ```
 
 4. Apply the database schema:
