@@ -106,7 +106,7 @@ spoofed `X-Forwarded-For` becomes possible).
 **if API calls fail, check this file still points at the live Render URL.**
 
 ```
-/api/*    https://expiresoon-api.onrender.com/api/:splat   200
+/api/*    https://expiryos-api.onrender.com/api/:splat   200
 /*        /index.html   200
 ```
 

@@ -7,6 +7,27 @@ This project follows [Semantic Versioning](https://semver.org/) and
 
 ---
 
+## [Unreleased] — Fix deployment URLs broken by the rename
+
+> Two hostnames were changed to non-existent ones during the "Rename to
+> ExpiresSoon" sweep, breaking the deployed app and CI. Both are corrected to
+> the hosts that actually exist.
+
+### Fixed
+- **`/api/*` proxy pointed at a dead backend.** `public/_redirects` was
+  repointed from `expiryos-api.onrender.com` to `expiresoon-api.onrender.com`,
+  but a Render service's `*.onrender.com` hostname is fixed at creation and
+  cannot be renamed — the backend is still `expiryos-api`. Every API call
+  (including item creation) hit a host with no server and returned HTTP 404
+  (`x-render-routing: no-server`). Restored the working target.
+- **CI checked a non-existent site.** The "Confirm the live site runs the new
+  build" step curled `expiresoon.netlify.app`, but the live Netlify site is
+  `expiressoon.netlify.app`; the wrong host 404s, so the deploy job failed even
+  though the deploy itself succeeded. Corrected in `ci.yml`, `.env.example`
+  (`FRONTEND_URL`), `KNOWLEDGE.md`, and the `app.ts` error message.
+
+---
+
 ## [Unreleased] — Documentation pass
 
 > Docs and config comments only. No code changes.
